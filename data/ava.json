@@ -1,0 +1,750 @@
+{
+  "1502087636154581183": {
+    "hostId": "541273928295907328",
+    "guildId": "824377709106429952",
+    "channelId": "824377709106429956",
+    "title": "AVA Raid Signup",
+    "description": "📜 Sign up for the raid below. Select your role and press Apply.",
+    "roles": [
+      {
+        "name": "MAIN TANK",
+        "limit": 1
+      },
+      {
+        "name": "SECOND TANK",
+        "limit": 1
+      },
+      {
+        "name": "MAIN HEALER",
+        "limit": 1
+      },
+      {
+        "name": "SUPPORT",
+        "limit": 2
+      },
+      {
+        "name": "DPS",
+        "limit": 5
+      },
+      {
+        "name": "DPS (MELEE)",
+        "limit": 3
+      },
+      {
+        "name": "DPS (RANGE)",
+        "limit": 3
+      },
+      {
+        "name": "SCOUT",
+        "limit": 1
+      }
+    ],
+    "signups": {
+      "541273928295907328": {
+        "userId": "541273928295907328",
+        "username": "moklaus",
+        "selectedRole": "MAIN HEALER",
+        "assignedRole": "MAIN HEALER",
+        "status": "accepted",
+        "timestamp": 1778196020302,
+        "panelMsgId": "1502087697215520839"
+      }
+    },
+    "massMessage": "⚔️ The raid is starting! Head to the voice channel now!",
+    "imageUrl": null,
+    "voiceChannel": null,
+    "massTime": null,
+    "messageId": "1502087636154581183",
+    "launchedAt": 1778196009272,
+    "active": true,
+    "pendingApprovals": {}
+  },
+  "1502088826808701028": {
+    "hostId": "541273928295907328",
+    "guildId": "824377709106429952",
+    "channelId": "824377709106429956",
+    "title": "AVA Raid Signup",
+    "description": "📜 Sign up for the raid below. Select your role and press Apply.",
+    "roles": [
+      {
+        "name": "MAIN TANK",
+        "limit": 1
+      },
+      {
+        "name": "SECOND TANK",
+        "limit": 1
+      },
+      {
+        "name": "MAIN HEALER",
+        "limit": 1
+      },
+      {
+        "name": "SUPPORT",
+        "limit": 2
+      },
+      {
+        "name": "DPS",
+        "limit": 5
+      },
+      {
+        "name": "DPS (MELEE)",
+        "limit": 3
+      },
+      {
+        "name": "DPS (RANGE)",
+        "limit": 3
+      },
+      {
+        "name": "SCOUT",
+        "limit": 1
+      }
+    ],
+    "signups": {
+      "541273928295907328": {
+        "userId": "541273928295907328",
+        "username": "moklaus",
+        "selectedRole": "MAIN TANK",
+        "assignedRole": "MAIN TANK",
+        "status": "accepted",
+        "timestamp": 1778196303132,
+        "panelMsgId": "1502088876955668592"
+      },
+      "616518029806796820": {
+        "userId": "616518029806796820",
+        "username": "moro.o",
+        "selectedRole": "MAIN HEALER",
+        "assignedRole": "SCOUT",
+        "status": "accepted",
+        "timestamp": 1778196453936,
+        "panelMsgId": "1502089508877893768"
+      }
+    },
+    "massMessage": "⚔️ The raid is starting! Head to the voice channel now!",
+    "imageUrl": null,
+    "voiceChannel": "1502088590967050390",
+    "massTime": 1778196555744,
+    "massMinutes": 5,
+    "messageId": "1502088826808701028",
+    "launchedAt": 1778196292945,
+    "active": false,
+    "pendingApprovals": {}
+  },
+  "1502098847722377379": {
+    "hostId": "541273928295907328",
+    "guildId": "824377709106429952",
+    "channelId": "824377709106429956",
+    "title": "AVA Raid Signup",
+    "description": "📜 Sign up for the raid below. Select your role and press Apply.",
+    "roles": [
+      {
+        "name": "MAIN TANK",
+        "limit": 1
+      },
+      {
+        "name": "SECOND TANK",
+        "limit": 1
+      },
+      {
+        "name": "MAIN HEALER",
+        "limit": 1
+      },
+      {
+        "name": "SUPPORT",
+        "limit": 2
+      },
+      {
+        "name": "DPS (MELEE)",
+        "limit": 3
+      },
+      {
+        "name": "SCOUT",
+        "limit": 1
+      }
+    ],
+    "signups": {},
+    "massMessage": "⚔️ The raid is starting! Head to the voice channel now!",
+    "imageUrl": null,
+    "voiceChannel": null,
+    "massTime": null,
+    "messageId": "1502098847722377379",
+    "launchedAt": 1778198682783,
+    "active": true
+  },
+  "1502100416647921734": {
+    "hostId": "541273928295907328",
+    "guildId": "824377709106429952",
+    "channelId": "824377709106429956",
+    "title": "AVA Raid Signup",
+    "description": "📜 Sign up for the raid below. Select your role and press Apply.",
+    "roles": [
+      {
+        "name": "MAIN TANK",
+        "limit": 1
+      },
+      {
+        "name": "SECOND TANK",
+        "limit": 1
+      },
+      {
+        "name": "MAIN HEALER",
+        "limit": 1
+      },
+      {
+        "name": "SUPPORT",
+        "limit": 2
+      },
+      {
+        "name": "DPS (MELEE)",
+        "limit": 3
+      },
+      {
+        "name": "SCOUT",
+        "limit": 1
+      }
+    ],
+    "signups": {
+      "541273928295907328": {
+        "userId": "541273928295907328",
+        "username": "moklaus",
+        "selectedRole": "MAIN TANK",
+        "assignedRole": "MAIN HEALER",
+        "status": "accepted",
+        "timestamp": 1778199056113
+      }
+    },
+    "massMessage": "⚔️ The raid is starting! Head to the voice channel now!",
+    "imageUrl": null,
+    "voiceChannel": null,
+    "massTime": 1778199220756,
+    "massMinutes": 3,
+    "messageId": "1502100416647921734",
+    "launchedAt": 1778199056113,
+    "active": false
+  },
+  "1502104046952120500": {
+    "hostId": "541273928295907328",
+    "guildId": "824377709106429952",
+    "channelId": "824377709106429956",
+    "title": "test",
+    "description": "test",
+    "roles": [
+      {
+        "name": "MAIN TANK",
+        "limit": 1
+      },
+      {
+        "name": "SECOND TANK",
+        "limit": 1
+      },
+      {
+        "name": "MAIN HEALER",
+        "limit": 1
+      },
+      {
+        "name": "SUPPORT",
+        "limit": 2
+      },
+      {
+        "name": "DPS (MELEE)",
+        "limit": 3
+      },
+      {
+        "name": "SCOUT",
+        "limit": 1
+      },
+      {
+        "name": "OK",
+        "limit": 1
+      }
+    ],
+    "signups": {
+      "541273928295907328": {
+        "userId": "541273928295907328",
+        "username": "moklaus",
+        "selectedRole": "MAIN TANK",
+        "assignedRole": "MAIN TANK",
+        "status": "accepted",
+        "timestamp": 1778199921637
+      }
+    },
+    "massMessage": "test",
+    "imageUrl": "https://tenor.com/view/toletole-toletolerun-toletolerunning-running-car-gif-12830145244311558315",
+    "voiceChannel": "1502088590967050390",
+    "massMinutes": 10,
+    "massTime": 1778200385842,
+    "messageId": "1502104046952120500",
+    "launchedAt": 1778199921636,
+    "active": false
+  },
+  "1502106807584297002": {
+    "hostId": "541273928295907328",
+    "guildId": "824377709106429952",
+    "channelId": "824377709106429956",
+    "title": "test",
+    "description": "test",
+    "roles": [
+      {
+        "name": "MAIN TANK",
+        "limit": 1
+      },
+      {
+        "name": "SECOND TANK",
+        "limit": 1
+      },
+      {
+        "name": "MAIN HEALER",
+        "limit": 1
+      },
+      {
+        "name": "SUPPORT",
+        "limit": 2
+      },
+      {
+        "name": "DPS (MELEE)",
+        "limit": 3
+      },
+      {
+        "name": "SCOUT",
+        "limit": 1
+      },
+      {
+        "name": "OK",
+        "limit": 1
+      }
+    ],
+    "signups": {
+      "541273928295907328": {
+        "userId": "541273928295907328",
+        "username": "moklaus",
+        "selectedRole": "MAIN TANK",
+        "assignedRole": "MAIN TANK",
+        "status": "accepted",
+        "timestamp": 1778200580005
+      }
+    },
+    "massMessage": "test",
+    "imageUrl": "https://cdn.discordapp.com/attachments/824377709106429956/1502106677447626782/toletole-toletolerun.gif?ex=69fe815b&is=69fd2fdb&hm=505394e47fe0891ed38292fda89191a5b2d517dadfd56289df717f6ba4939115",
+    "voiceChannel": "1502088590967050390",
+    "massMinutes": 10,
+    "massTime": 1778201164316,
+    "messageId": "1502106807584297002",
+    "launchedAt": 1778200580005,
+    "active": true
+  },
+  "1502129847864922202": {
+    "hostId": "541273928295907328",
+    "guildId": "824377709106429952",
+    "channelId": "824377709106429956",
+    "title": "test",
+    "description": "test",
+    "roles": [
+      {
+        "name": "MAIN TANK",
+        "limit": 1
+      },
+      {
+        "name": "SECOND TANK",
+        "limit": 1
+      },
+      {
+        "name": "MAIN HEALER",
+        "limit": 1
+      },
+      {
+        "name": "SUPPORT",
+        "limit": 2
+      },
+      {
+        "name": "DPS (MELEE)",
+        "limit": 3
+      },
+      {
+        "name": "SCOUT",
+        "limit": 1
+      },
+      {
+        "name": "OK",
+        "limit": 1
+      }
+    ],
+    "signups": {
+      "616518029806796820": {
+        "userId": "616518029806796820",
+        "username": "moro.o",
+        "selectedRole": "SUPPORT",
+        "assignedRole": "SUPPORT",
+        "status": "accepted",
+        "timestamp": 1778206031425,
+        "addedByHost": true
+      },
+      "541273928295907328": {
+        "userId": "541273928295907328",
+        "username": "moklaus",
+        "selectedRole": "MAIN TANK",
+        "assignedRole": "MAIN TANK",
+        "status": "accepted",
+        "timestamp": 1778206063619
+      }
+    },
+    "massMessage": "test",
+    "imageUrl": "https://cdn.discordapp.com/attachments/824377709106429956/1502106677447626782/toletole-toletolerun.gif?ex=69fe815b&is=69fd2fdb&hm=505394e47fe0891ed38292fda89191a5b2d517dadfd56289df717f6ba4939115",
+    "voiceChannel": "1502088590967050390",
+    "massMinutes": 1,
+    "massTime": 1778206176163,
+    "messageId": "1502129847864922202",
+    "launchedAt": 1778206063619,
+    "active": false
+  },
+  "1502137582593642746": {
+    "hostId": "541273928295907328",
+    "guildId": "824377709106429952",
+    "channelId": "824377709106429956",
+    "title": "AVA Raid Signup",
+    "description": "\n  - ROLE -                 - Item -\n  MAIN TANK       >>    (MAPS + GUCCI ITEMS)\n  SECOND TANK     >>    (CAPE AND BAGS) \n  MAIN HEALER     >>    (ARTIFACTS)\n  SNAKE           >>    (HELMETS)\n  INCUBUS SUPPORT >>    (GROUND LOOT) \n  SHADOWCALLER    >>    (MELEE DPS))\n  REALNIGGER      >>    (RANGE DPS) \n  CRSYTAL REAPER  >>    (OFF HANDS)\n  CRSYTAL REAPER  >>    (SHOES)\n  CRSYTAL REAPER  >>    (ARMOR)",
+    "roles": [
+      {
+        "name": "MAIN TANK",
+        "limit": 1
+      },
+      {
+        "name": "SECOND TANK",
+        "limit": 1
+      },
+      {
+        "name": "MAIN HEALER",
+        "limit": 1
+      },
+      {
+        "name": "SNAKE",
+        "limit": 1
+      },
+      {
+        "name": "INCUBUS SUPPORT",
+        "limit": 1
+      },
+      {
+        "name": "SHADOWCALLER",
+        "limit": 1
+      },
+      {
+        "name": "REALNIGGER",
+        "limit": 1
+      },
+      {
+        "name": "CRSYTAL REAPER",
+        "limit": 3
+      },
+      {
+        "name": "EXTRA DPS",
+        "limit": 1
+      }
+    ],
+    "signups": {
+      "541273928295907328": {
+        "userId": "541273928295907328",
+        "username": "moklaus",
+        "selectedRole": "MAIN TANK",
+        "assignedRole": "MAIN TANK",
+        "status": "accepted",
+        "timestamp": 1778207907707
+      }
+    },
+    "massMessage": "The raid is starting! Head to the voice channel now!",
+    "imageUrl": "https://cdn.discordapp.com/attachments/824377709106429956/1502106677447626782/toletole-toletolerun.gif?ex=69fe815b&is=69fd2fdb&hm=505394e47fe0891ed38292fda89191a5b2d517dadfd56289df717f6ba4939115",
+    "voiceChannel": "1502088590967050390",
+    "massMinutes": 10,
+    "massTime": 1778208507707,
+    "messageId": "1502137582593642746",
+    "launchedAt": 1778207907707,
+    "active": true
+  },
+  "1502146741443493968": {
+    "hostId": "541273928295907328",
+    "guildId": "824377709106429952",
+    "channelId": "824377709106429956",
+    "title": " AVA Raid Signup",
+    "description": "\n  MAIN TANK >>    (MAPS + GUCCI ITEMS)\n  SECOND TANK >>    (CAPE AND BAGS) \n  MAIN HEALER >>    (ARTIFACTS)\n  SNAKE >>    (HELMETS)\n  INCUBUS SUPPORT >>    (GROUND LOOT) \n  SHADOWCALLER >>    (MELEE DPS))\n  REALNIGGER >>    (RANGE DPS) \n  CRSYTAL REAPER >>    (OFF HANDS)\n  CRSYTAL REAPER >>    (SHOES)\n  CRSYTAL REAPER >>    (ARMOR)",
+    "roles": [
+      {
+        "name": "MAIN TANK",
+        "limit": 1
+      },
+      {
+        "name": "SECOND TANK",
+        "limit": 1
+      },
+      {
+        "name": "MAIN HEALER",
+        "limit": 1
+      },
+      {
+        "name": "SNAKE",
+        "limit": 1
+      },
+      {
+        "name": "INCUBUS SUPPORT",
+        "limit": 1
+      },
+      {
+        "name": "SHADOWCALLER",
+        "limit": 1
+      },
+      {
+        "name": "REALNIGGER",
+        "limit": 1
+      },
+      {
+        "name": "CRSYTAL REAPER",
+        "limit": 3
+      },
+      {
+        "name": "EXTRA DPS",
+        "limit": 1
+      }
+    ],
+    "signups": {
+      "541273928295907328": {
+        "userId": "541273928295907328",
+        "username": "moklaus",
+        "selectedRole": "MAIN TANK",
+        "assignedRole": "MAIN TANK",
+        "status": "rejected",
+        "timestamp": 1778210156033,
+        "panelMsgId": "1502147015075827732"
+      }
+    },
+    "massMessage": "The raid is starting! Head to the voice channel now!",
+    "imageUrl": "https://cdn.discordapp.com/attachments/824377709106429956/1502106677447626782/toletole-toletolerun.gif?ex=69fe815b&is=69fd2fdb&hm=505394e47fe0891ed38292fda89191a5b2d517dadfd56289df717f6ba4939115",
+    "voiceChannel": "1502088590967050390",
+    "massMinutes": 10,
+    "massTime": 1778210691369,
+    "pingRoleId": "1495773876368445531",
+    "messageId": "1502146741443493968",
+    "launchedAt": 1778210091369,
+    "active": true,
+    "pendingApprovals": {}
+  },
+  "1502221708424118362": {
+    "hostId": "541273928295907328",
+    "guildId": "824377709106429952",
+    "channelId": "824377709106429956",
+    "title": " AVA Raid Signup",
+    "description": "\n  MAIN TANK >>    (MAPS + GUCCI ITEMS)\n  SECOND TANK >>    (CAPE AND BAGS) \n  MAIN HEALER >>    (ARTIFACTS)\n  SNAKE >>    (HELMETS)\n  INCUBUS SUPPORT >>    (GROUND LOOT) \n  SHADOWCALLER >>    (MELEE DPS))\n  REALNIGGER >>    (RANGE DPS) \n  CRSYTAL REAPER >>    (OFF HANDS)\n  CRSYTAL REAPER >>    (SHOES)\n  CRSYTAL REAPER >>    (ARMOR)",
+    "roles": [
+      {
+        "name": "MAIN TANK",
+        "limit": 1,
+        "emoji": null
+      },
+      {
+        "name": "SECOND TANK",
+        "limit": 1,
+        "emoji": null
+      },
+      {
+        "name": "MAIN HEALER",
+        "limit": 1,
+        "emoji": null
+      },
+      {
+        "name": "SNAKE",
+        "limit": 1,
+        "emoji": null
+      },
+      {
+        "name": "INCUBUS SUPPORT",
+        "limit": 1,
+        "emoji": null
+      },
+      {
+        "name": "SHADOWCALLER",
+        "limit": 1,
+        "emoji": null
+      },
+      {
+        "name": "REALNIGGER",
+        "limit": 1,
+        "emoji": null
+      },
+      {
+        "name": "CRSYTAL REAPER",
+        "limit": 3,
+        "emoji": null
+      },
+      {
+        "name": "EXTRA DPS",
+        "limit": 1,
+        "emoji": null
+      }
+    ],
+    "signups": {
+      "541273928295907328": {
+        "userId": "541273928295907328",
+        "username": "moklaus",
+        "selectedRole": "MAIN TANK",
+        "assignedRole": "MAIN TANK",
+        "status": "accepted",
+        "timestamp": 1778227964986
+      }
+    },
+    "massMessage": "The raid is starting! Head to the voice channel now!",
+    "imageUrl": "https://cdn.discordapp.com/attachments/824377709106429956/1502106677447626782/toletole-toletolerun.gif?ex=69fe815b&is=69fd2fdb&hm=505394e47fe0891ed38292fda89191a5b2d517dadfd56289df717f6ba4939115",
+    "voiceChannel": "1502088590967050390",
+    "inviteUrl": "https://discord.gg/GYFGy85rM",
+    "massMinutes": 1,
+    "massTime": 1778228024986,
+    "pingRoleId": "1495773876368445531",
+    "messageId": "1502221708424118362",
+    "launchedAt": 1778227964986,
+    "active": false
+  },
+  "1502225273851220029": {
+    "hostId": "541273928295907328",
+    "guildId": "824377709106429952",
+    "channelId": "824377709106429956",
+    "title": " AVA Raid Signup",
+    "description": "\n  MAIN TANK >>    (MAPS + GUCCI ITEMS)\n  SECOND TANK >>    (CAPE AND BAGS) \n  MAIN HEALER >>    (ARTIFACTS)\n  SNAKE >>    (HELMETS)\n  INCUBUS SUPPORT >>    (GROUND LOOT) \n  SHADOWCALLER >>    (MELEE DPS))\n  REALNIGGER >>    (RANGE DPS) \n  CRSYTAL REAPER >>    (OFF HANDS)\n  CRSYTAL REAPER >>    (SHOES)\n  CRSYTAL REAPER >>    (ARMOR)",
+    "roles": [
+      {
+        "name": "MAIN TANK",
+        "limit": 1,
+        "emoji": null
+      },
+      {
+        "name": "SECOND TANK",
+        "limit": 1,
+        "emoji": null
+      },
+      {
+        "name": "MAIN HEALER",
+        "limit": 1,
+        "emoji": null
+      },
+      {
+        "name": "SNAKE",
+        "limit": 1,
+        "emoji": null
+      },
+      {
+        "name": "INCUBUS SUPPORT",
+        "limit": 1,
+        "emoji": null
+      },
+      {
+        "name": "SHADOWCALLER",
+        "limit": 1,
+        "emoji": null
+      },
+      {
+        "name": "REALNIGGER",
+        "limit": 1,
+        "emoji": null
+      },
+      {
+        "name": "CRSYTAL REAPER",
+        "limit": 3,
+        "emoji": null
+      },
+      {
+        "name": "EXTRA DPS",
+        "limit": 1,
+        "emoji": null
+      }
+    ],
+    "signups": {
+      "541273928295907328": {
+        "userId": "541273928295907328",
+        "username": "moklaus",
+        "selectedRole": "MAIN TANK",
+        "assignedRole": "MAIN TANK",
+        "status": "accepted",
+        "timestamp": 1778228814958
+      }
+    },
+    "massMessage": "The raid is starting! Head to the voice channel now!",
+    "imageUrl": "https://cdn.discordapp.com/attachments/824377709106429956/1502106677447626782/toletole-toletolerun.gif?ex=69fe815b&is=69fd2fdb&hm=505394e47fe0891ed38292fda89191a5b2d517dadfd56289df717f6ba4939115",
+    "voiceChannel": "1502088590967050390",
+    "inviteUrl": "https://discord.gg/GYFGy85rM",
+    "massMinutes": 1,
+    "massTime": 1778228874958,
+    "pingRoleId": "1495773876368445531",
+    "messageId": "1502225273851220029",
+    "launchedAt": 1778228814958,
+    "active": true
+  },
+  "1502226789068701797": {
+    "hostId": "616518029806796820",
+    "guildId": "824377709106429952",
+    "channelId": "824377709106429956",
+    "title": "AVA Raid Signup",
+    "description": "MAIN TANK >>    (MAPS + GUCCI ITEMS)\nSECOND TANK >>    (CAPE AND BAGS)\nMAIN HEALER >>    (ARTIFACTS)\nSNAKE >>    (HELMETS)\nINCUBUS SUPPORT >>    (GROUND LOOT)\nSHADOWCALLER >>    (MELEE DPS)\nREALNIGGER >>    (RANGE DPS)\nCRSYTAL REAPER >>    (OFF HANDS)\nCRSYTAL REAPER >>    (SHOES)\nCRSYTAL REAPER >>    (ARMOR)",
+    "roles": [
+      {
+        "name": "MAIN TANK",
+        "limit": 1
+      },
+      {
+        "name": "SECOND TANK",
+        "limit": 1
+      },
+      {
+        "name": "MAIN HEALER",
+        "limit": 1
+      },
+      {
+        "name": "SNAKE",
+        "limit": 1
+      },
+      {
+        "name": "INCUBUS SUPPORT",
+        "limit": 1
+      },
+      {
+        "name": "SHADOWCALLER",
+        "limit": 1
+      },
+      {
+        "name": "REALNIGGER",
+        "limit": 1
+      },
+      {
+        "name": "CRSYTAL REAPER",
+        "limit": 3
+      },
+      {
+        "name": "EXTRA DPS",
+        "limit": 1
+      }
+    ],
+    "signups": {
+      "541273928295907328": {
+        "userId": "541273928295907328",
+        "username": "moklaus",
+        "selectedRole": "MAIN HEALER",
+        "assignedRole": "MAIN HEALER",
+        "status": "accepted",
+        "timestamp": 1778229186635
+      },
+      "616518029806796820": {
+        "userId": "616518029806796820",
+        "username": "moro.o",
+        "selectedRole": "SHADOWCALLER",
+        "assignedRole": "SHADOWCALLER",
+        "status": "accepted",
+        "timestamp": 1778229187432,
+        "panelMsgId": "1502226841841438737"
+      }
+    },
+    "massMessage": "The raid is starting! Head to the voice channel now!",
+    "imageUrl": null,
+    "voiceChannel": null,
+    "inviteUrl": null,
+    "massMinutes": 50,
+    "massTime": 1778232175225,
+    "pingRoleId": null,
+    "messageId": "1502226789068701797",
+    "launchedAt": 1778229175225,
+    "active": true,
+    "pendingApprovals": {}
+  }
+}
