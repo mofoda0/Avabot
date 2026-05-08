@@ -1107,31 +1107,32 @@ function scheduleMass(client, messageId, ava) {
       const accepted = Object.values(fresh.signups).filter(s => s.status === 'accepted');
       const pings    = accepted.map(s => `<@${s.userId}>`).join(' ');
 
-      const massEmbed = new EmbedBuilder()
-        .setTitle(`⚔️ ${fresh.title} — MASS TIME!`)
-        .setDescription(fresh.massMessage)
-        .setColor(0xED4245)
-        .addFields({ name: '✅ Accepted Members', value: String(accepted.length), inline: true })
-        .setTimestamp();
+      // const massEmbed = new EmbedBuilder()
+      //   .setTitle(`⚔️ ${fresh.title} — MASS TIME!`)
+      //   .setDescription(fresh.massMessage)
+      //   .setColor(0xED4245)
+      //   .addFields({ name: '✅ Accepted Members', value: String(accepted.length), inline: true })
+      //   .setTimestamp();
 
-      for (const role of (fresh.roles || [])) {
-        const members = accepted.filter(s => s.assignedRole === role.name);
-        if (members.length) {
-          massEmbed.addFields({
-            name:   `${getRoleEmoji(role.name, role)} ${role.name}`,
-            value:  members.map(s => `<@${s.userId}>`).join('\n'),
-            inline: true,
-          });
-        }
-      }
+      // for (const role of (fresh.roles || [])) {
+      //   const members = accepted.filter(s => s.assignedRole === role.name);
+      //   if (members.length) {
+      //     massEmbed.addFields({
+      //       name:   `${getRoleEmoji(role.name, role)} ${role.name}`,
+      //       value:  members.map(s => `<@${s.userId}>`).join('\n'),
+      //       inline: true,
+      //     });
+      //   }
+      // }
 
       // Send mass embed
-      await channel.send({ embeds: [massEmbed] });
+      // await channel.send({ embeds: [massEmbed] });
 
       // Send pings + voice channel invite as a plain message (NOT in the embed)
       if (pings || fresh.inviteUrl) {
         const parts = [];
         if (pings) parts.push(pings);
+        if (fresh.massMessage) parts.push(`${fresh.massMessage}`);
         if (fresh.voiceChannel) parts.push(`🔊 <#${fresh.voiceChannel}>`);
         if (fresh.inviteUrl)    parts.push(`🔗 ${fresh.inviteUrl}`);
         await channel.send({ content: parts.join('\n') });
