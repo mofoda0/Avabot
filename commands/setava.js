@@ -11,7 +11,6 @@ module.exports = {
         .setName('create')
         .setDescription('Create and launch a new AVA raid signup (AVA Leader only)')
     )
-
     // ── Bot owner only ──────────────────────────────────────────────
     .addSubcommand(sub =>
       sub
@@ -21,7 +20,6 @@ module.exports = {
           opt.setName('role').setDescription('The role that should be treated as AVA Leader').setRequired(true)
         )
     )
-
     // ── Quick default setters (AVA Leader only) ─────────────────────
     .addSubcommand(sub =>
       sub

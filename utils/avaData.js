@@ -15,7 +15,10 @@ function loadFile(filePath) {
 function saveFile(filePath, data) {
   try {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    // Atomic write — prevents JSON corruption on crash
+    const tmp = filePath + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
+    fs.renameSync(tmp, filePath);
   } catch (err) {
     console.error(`❌ Could not save ${filePath}:`, err);
   }
@@ -23,8 +26,8 @@ function saveFile(filePath, data) {
 
 // ── AVA records ────────────────────────────────────────────────────
 
-function load()          { return loadFile(AVA_PATH); }
-function save(data)      { saveFile(AVA_PATH, data); }
+function load()     { return loadFile(AVA_PATH); }
+function save(data) { saveFile(AVA_PATH, data); }
 
 function getAva(messageId) {
   return load()[messageId] ?? null;
@@ -49,23 +52,10 @@ function getGuildAvas(guildId) {
     .map(([k, v]) => ({ messageId: k, ...v }));
 }
 
-function getAvaByHostPanel(panelMsgId) {
-  const all = load();
-  for (const [msgId, ava] of Object.entries(all)) {
-    if (ava.pendingApprovals) {
-      for (const approval of Object.values(ava.pendingApprovals)) {
-        if (approval.panelMsgId === panelMsgId) return { messageId: msgId, ava };
-      }
-    }
-  }
-  return null;
-}
-
-// ── Bot config (AVA leader role per guild) ─────────────────────────
+// ── Bot config ─────────────────────────────────────────────────────
 
 function getBotConfig(guildId) {
-  const all = loadFile(CONFIG_PATH);
-  return all[guildId] ?? {};
+  return loadFile(CONFIG_PATH)[guildId] ?? {};
 }
 
 function setBotConfig(guildId, data) {
@@ -85,86 +75,85 @@ function setAvaLeaderRoleId(guildId, roleId) {
 // ── Per-host saved defaults ────────────────────────────────────────
 
 const DEFAULT_ROLES = [
-  { name: 'MAIN TANK',       limit: 1 },
-  { name: 'SECOND TANK',     limit: 1 },
-  { name: 'MAIN HEALER',     limit: 1 },
-  { name: 'SNAKE',           limit: 1 },
-  { name: 'INCUBUS SUPPORT', limit: 1 },
-  { name: 'SHADOWCALLER',    limit: 1 },
-  { name: 'REALNIGGER',      limit: 1 },
-  { name: 'CRSYTAL REAPER',  limit: 3 },
-  { name: 'EXTRA DPS',       limit: 1 },
+  { name: 'MAIN TANK',       limit: 1, description: 'Maps + Gucci Items'      },
+  { name: 'SECOND TANK',     limit: 1, description: 'Cape and Bags'           },
+  { name: 'MAIN HEALER',     limit: 1, description: 'Artifacts'               },
+  { name: 'SNAKE',           limit: 1, description: 'Helmets'                 },
+  { name: 'INCUBUS SUPPORT', limit: 1, description: 'Ground Loot'             },
+  { name: 'SHADOWCALLER',    limit: 1, description: 'Melee DPS'               },
+  { name: 'REALNIGGER',      limit: 1, description: 'Range DPS'               },
+  { name: 'CRSYTAL REAPER',  limit: 3, description: 'Off Hands / Shoes / Armor' },
+  { name: 'EXTRA DPS',       limit: 1, description: null                      },
 ];
 
 const SYSTEM_DEFAULTS = {
-  title:        'AVA Raid Signup',
-  description:  [
-    'MAIN TANK >>    (MAPS + GUCCI ITEMS)',
-    'SECOND TANK >>    (CAPE AND BAGS)',
-    'MAIN HEALER >>    (ARTIFACTS)',
-    'SNAKE >>    (HELMETS)',
-    'INCUBUS SUPPORT >>    (GROUND LOOT)',
-    'SHADOWCALLER >>    (MELEE DPS)',
-    'REALNIGGER >>    (RANGE DPS)',
-    'CRSYTAL REAPER >>    (OFF HANDS)',
-    'CRSYTAL REAPER >>    (SHOES)',
-    'CRSYTAL REAPER >>    (ARMOR)',
-  ].join('\n'),
-  roles:       DEFAULT_ROLES,
-  massMessage: 'The raid is starting! Head to the voice channel now!',
-  imageUrl:    null,
-  // voiceChannel: stored internally for invite logic but NOT shown in any embed
+  title:        'AVA 8.3',
+  description:  null,
+  roles:        DEFAULT_ROLES,
+  massMessage:  'Massing Now!',
+  imageUrl:     null,
   voiceChannel: null,
-  inviteUrl:    null,   // ← host-provided link, sent as plain message at mass time
+  inviteUrl:    null,
   massMinutes:  null,
   pingRoleId:   null,
 };
 
-function _hostKey(guildId, userId) {
-  return `${guildId}_${userId}`;
-}
+function _hostKey(guildId, userId) { return `${guildId}_${userId}`; }
 
-/**
- * Returns the host's saved defaults merged over system defaults.
- * Always deep-clones so callers can mutate freely.
- */
 function getHostDefaults(guildId, userId) {
   const all   = loadFile(DEFAULTS_PATH);
   const saved = all[_hostKey(guildId, userId)] ?? {};
+
+  // Build roles: use saved roles if present, otherwise system defaults.
+  // FIX: if a saved role has description: null but the system default for that
+  // same role name has a description, inherit it — prevents stale null from
+  // disk wiping descriptions that were added/changed in DEFAULT_ROLES.
+  let roles;
+  if (saved.roles) {
+    roles = JSON.parse(JSON.stringify(saved.roles)).map(savedRole => {
+      if (savedRole.description !== null && savedRole.description !== undefined) {
+        return savedRole; // host explicitly set a description, keep it
+      }
+      const systemRole = DEFAULT_ROLES.find(r => r.name === savedRole.name);
+      return {
+        ...savedRole,
+        description: systemRole?.description ?? null,
+      };
+    });
+  } else {
+    roles = JSON.parse(JSON.stringify(SYSTEM_DEFAULTS.roles));
+  }
+
   return {
     ...JSON.parse(JSON.stringify(SYSTEM_DEFAULTS)),
     ...saved,
-    roles: saved.roles
-      ? JSON.parse(JSON.stringify(saved.roles))
-      : JSON.parse(JSON.stringify(SYSTEM_DEFAULTS.roles)),
-    massTime: null, // always reset — recomputed from massMinutes at launch
+    roles,
+    massTime: null,
   };
 }
 
-/**
- * Persists a subset of the draft as the host's new defaults.
- * Only saves template fields — never live signup data.
- */
 function saveHostDefaults(guildId, userId, draft) {
   const all = loadFile(DEFAULTS_PATH);
   const key = _hostKey(guildId, userId);
   all[key] = {
     title:        draft.title,
-    description:  draft.description,
+    description:  draft.description  ?? null,
     imageUrl:     draft.imageUrl     ?? null,
     voiceChannel: draft.voiceChannel ?? null,
     inviteUrl:    draft.inviteUrl    ?? null,
     massMessage:  draft.massMessage,
     massMinutes:  draft.massMinutes  ?? null,
     pingRoleId:   draft.pingRoleId   ?? null,
-    roles: (draft.roles ?? []).map(r => ({ name: r.name, limit: r.limit ?? null, emoji: r.emoji ?? null })),
+    roles: (draft.roles ?? []).map(r => ({
+      name:        r.name,
+      limit:       r.limit       ?? null,
+      emoji:       r.emoji       ?? null,
+      description: r.description ?? null,
+    })),
   };
   saveFile(DEFAULTS_PATH, all);
 }
 
-/**
- * Wipes the host's saved defaults so the system defaults are used next time.
- */
 function resetHostDefaults(guildId, userId) {
   const all = loadFile(DEFAULTS_PATH);
   delete all[_hostKey(guildId, userId)];
@@ -173,8 +162,8 @@ function resetHostDefaults(guildId, userId) {
 
 module.exports = {
   load, save,
-  getAva, saveAva, deleteAva, getGuildAvas, getAvaByHostPanel,
+  getAva, saveAva, deleteAva, getGuildAvas,
   getAvaLeaderRoleId, setAvaLeaderRoleId,
-  getHostDefaults, saveHostDefaults, resetHostDefaults,
+  getHostDefaults, saveHostDefaults, resetHostDefaults,getGuildAvas,
   DEFAULT_ROLES,
 };

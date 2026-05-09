@@ -13,8 +13,8 @@ const {
 } = require('../utils/avaData');
 
 const {
-  buildAvaEmbed, buildAvaComponents, buildHostPanel,
-  buildSetupEmbed, buildManagePanel, getRoleEmoji,
+  buildAvaEmbed, buildAvaComponents, buildLiveHostPanel,
+  buildSetupEmbed, getRoleEmoji,
 } = require('../utils/avaBuilder');
 
 // messageId → timeout
@@ -45,7 +45,37 @@ async function updateAvaEmbed(client, ava) {
   } catch (err) { console.error('❌ Could not update AVA embed:', err); }
 }
 
-/** Checks AVA Leader role or ManageGuild fallback. Returns true if allowed. */
+/**
+ * Sends or edits the single persistent host DM panel.
+ * Stores the message ID in ava.hostPanelMsgId so we can edit it next time.
+ */
+async function updateHostPanel(client, ava) {
+  try {
+    const hostUser = await client.users.fetch(ava.hostId).catch(() => null);
+    if (!hostUser) return;
+
+    const panelPayload = buildLiveHostPanel(ava);
+
+    if (ava.hostPanelMsgId) {
+      try {
+        const dmChannel = await hostUser.createDM();
+        const existing  = await dmChannel.messages.fetch(ava.hostPanelMsgId).catch(() => null);
+        if (existing) {
+          await existing.edit(panelPayload);
+          return;
+        }
+      } catch { /* fall through and send a new one */ }
+    }
+
+    // No existing panel — send a fresh one
+    const sent = await hostUser.send(panelPayload);
+    ava.hostPanelMsgId = sent.id;
+    saveAva(ava.messageId, ava);
+  } catch (err) {
+    console.error('❌ Could not update host panel DM:', err);
+  }
+}
+
 async function checkLeaderRole(interaction, guildId) {
   const leaderRoleId = getAvaLeaderRoleId(guildId);
   if (leaderRoleId) {
@@ -102,7 +132,6 @@ module.exports = {
       if (interaction.isChatInputCommand() && interaction.commandName === 'setava') {
         const sub = interaction.options.getSubcommand();
 
-        // ── setleaderrole ─────────────────────────────────────────
         if (sub === 'setleaderrole') {
           const ownerIds = (process.env.BOT_OWNER_IDS || '').split(',').map(id => id.trim()).filter(Boolean);
           if (!ownerIds.includes(interaction.user.id)) {
@@ -110,22 +139,15 @@ module.exports = {
           }
           const role = interaction.options.getRole('role');
           setAvaLeaderRoleId(guildId, role.id);
-          return safeReply(interaction, {
-            content: `✅ AVA Leader role set to **${role.name}**.`,
-            flags: MessageFlags.Ephemeral,
-          });
+          return safeReply(interaction, { content: `✅ AVA Leader role set to **${role.name}**.`, flags: MessageFlags.Ephemeral });
         }
 
-        // ── create ────────────────────────────────────────────────
         if (sub === 'create') {
           if (!await checkLeaderRole(interaction, guildId)) return;
-
           const setupId  = `${interaction.user.id}_${Date.now()}`;
           const defaults = getHostDefaults(guildId, interaction.user.id);
-
           setupDrafts.set(setupId, {
-            hostId:       interaction.user.id,
-            guildId,
+            hostId: interaction.user.id, guildId,
             channelId:    interaction.channelId,
             title:        defaults.title,
             description:  defaults.description,
@@ -139,99 +161,70 @@ module.exports = {
             massTime:     null,
             pingRoleId:   defaults.pingRoleId   ?? null,
           });
-
           return safeReply(interaction, {
-            embeds:     [buildSetupEmbed(setupDrafts.get(setupId))],
+            embeds: [buildSetupEmbed(setupDrafts.get(setupId))],
             components: buildSetupRows(setupId),
-            flags:      MessageFlags.Ephemeral,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
-        // ── settimer ──────────────────────────────────────────────
         if (sub === 'settimer') {
           if (!await checkLeaderRole(interaction, guildId)) return;
-          const mins     = interaction.options.getInteger('minutes');
+          const mins = interaction.options.getInteger('minutes');
           const defaults = getHostDefaults(guildId, interaction.user.id);
           defaults.massMinutes = mins;
           saveHostDefaults(guildId, interaction.user.id, defaults);
-          return safeReply(interaction, {
-            content: `✅ Default mass timer set to **${mins} minutes**.`,
-            flags: MessageFlags.Ephemeral,
-          });
+          return safeReply(interaction, { content: `✅ Default mass timer set to **${mins} minutes**.`, flags: MessageFlags.Ephemeral });
         }
 
-        // ── settitle ──────────────────────────────────────────────
         if (sub === 'settitle') {
           if (!await checkLeaderRole(interaction, guildId)) return;
-          const title    = interaction.options.getString('title');
+          const title = interaction.options.getString('title');
           const defaults = getHostDefaults(guildId, interaction.user.id);
           defaults.title = title;
           saveHostDefaults(guildId, interaction.user.id, defaults);
-          return safeReply(interaction, {
-            content: `✅ Default title set to **${title}**.`,
-            flags: MessageFlags.Ephemeral,
-          });
+          return safeReply(interaction, { content: `✅ Default title set to **${title}**.`, flags: MessageFlags.Ephemeral });
         }
 
-        // ── setimage ──────────────────────────────────────────────
         if (sub === 'setimage') {
           if (!await checkLeaderRole(interaction, guildId)) return;
-          const url      = interaction.options.getString('url');
+          const url = interaction.options.getString('url');
           const defaults = getHostDefaults(guildId, interaction.user.id);
           defaults.imageUrl = url;
           saveHostDefaults(guildId, interaction.user.id, defaults);
-          return safeReply(interaction, {
-            content: `✅ Default image set.`,
-            flags: MessageFlags.Ephemeral,
-          });
+          return safeReply(interaction, { content: `✅ Default image set.`, flags: MessageFlags.Ephemeral });
         }
 
-        // ── setpingrole ───────────────────────────────────────────
         if (sub === 'setpingrole') {
           if (!await checkLeaderRole(interaction, guildId)) return;
-          const role     = interaction.options.getRole('role');
+          const role = interaction.options.getRole('role');
           const defaults = getHostDefaults(guildId, interaction.user.id);
           defaults.pingRoleId = role.id;
           saveHostDefaults(guildId, interaction.user.id, defaults);
-          return safeReply(interaction, {
-            content: `✅ Ping role set to **${role.name}**.`,
-            flags: MessageFlags.Ephemeral,
-          });
+          return safeReply(interaction, { content: `✅ Ping role set to **${role.name}**.`, flags: MessageFlags.Ephemeral });
         }
 
-        // ── setinvite ─────────────────────────────────────────────
         if (sub === 'setinvite') {
           if (!await checkLeaderRole(interaction, guildId)) return;
-          const url      = interaction.options.getString('url');
+          const url = interaction.options.getString('url');
           const defaults = getHostDefaults(guildId, interaction.user.id);
           defaults.inviteUrl = url;
           saveHostDefaults(guildId, interaction.user.id, defaults);
-          return safeReply(interaction, {
-            content: `✅ Default invite link set to: ${url}`,
-            flags: MessageFlags.Ephemeral,
-          });
+          return safeReply(interaction, { content: `✅ Default invite link set to: ${url}`, flags: MessageFlags.Ephemeral });
         }
 
-        // ── setmassmsg — opens modal ──────────────────────────────
         if (sub === 'setmassmsg') {
           if (!await checkLeaderRole(interaction, guildId)) return;
           const defaults = getHostDefaults(guildId, interaction.user.id);
-          const modal = new ModalBuilder()
-            .setCustomId('ava_quick_massmsg')
-            .setTitle('Set Default Mass Message');
+          const modal = new ModalBuilder().setCustomId('ava_quick_massmsg').setTitle('Set Default Mass Message');
           modal.addComponents(new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-              .setCustomId('msg')
-              .setLabel('Mass message')
-              .setStyle(TextInputStyle.Paragraph)
-              .setValue(defaults.massMessage || '')
-              .setRequired(true)
-              .setMaxLength(500)
+            new TextInputBuilder().setCustomId('msg').setLabel('Mass message')
+              .setStyle(TextInputStyle.Paragraph).setValue(defaults.massMessage || '')
+              .setRequired(true).setMaxLength(500)
           ));
           return interaction.showModal(modal);
         }
 
-        // ── defaults — show current saved defaults ────────────────
         if (sub === 'defaults') {
           if (!await checkLeaderRole(interaction, guildId)) return;
           const d = getHostDefaults(guildId, interaction.user.id);
@@ -241,35 +234,30 @@ module.exports = {
             `📣 **Ping Role:** ${d.pingRoleId ? `<@&${d.pingRoleId}>` : '*Not set*'}`,
             `🔗 **Invite URL:** ${d.inviteUrl || '*Not set*'}`,
             `🖼️ **Image:** ${d.imageUrl || '*Not set*'}`,
-            `📋 **Roles:** ${d.roles.map(r => `${r.name}${r.limit ? ` (${r.limit})` : ''}`).join(', ')}`,
+            `📋 **Roles:** ${d.roles.map(r => `${r.name}${r.limit ? ` (${r.limit})` : ''}${r.description ? ` — ${r.description}` : ''}`).join(', ')}`,
           ];
-          return safeReply(interaction, {
-            content: lines.join('\n'),
-            flags: MessageFlags.Ephemeral,
-          });
+          return safeReply(interaction, { content: lines.join('\n'), flags: MessageFlags.Ephemeral });
         }
 
-        // ── resetdefaults ─────────────────────────────────────────
         if (sub === 'resetdefaults') {
           if (!await checkLeaderRole(interaction, guildId)) return;
           resetHostDefaults(guildId, interaction.user.id);
           return safeReply(interaction, {
-            content: '✅ Your saved defaults have been reset to the system defaults. They will load next time you run `/setava create`.',
+            content: '✅ Your saved defaults have been reset to the system defaults.',
             flags: MessageFlags.Ephemeral,
           });
         }
       }
 
+
+
       // ── Quick mass message modal submit ───────────────────────────
       if (interaction.isModalSubmit() && interaction.customId === 'ava_quick_massmsg') {
-        const msg      = interaction.fields.getTextInputValue('msg');
+        const msg = interaction.fields.getTextInputValue('msg');
         const defaults = getHostDefaults(guildId, interaction.user.id);
         defaults.massMessage = msg;
         saveHostDefaults(guildId, interaction.user.id, defaults);
-        return safeReply(interaction, {
-          content: '✅ Default mass message saved.',
-          flags: MessageFlags.Ephemeral,
-        });
+        return safeReply(interaction, { content: '✅ Default mass message saved.', flags: MessageFlags.Ephemeral });
       }
 
       // ══════════════════════════════════════════════════════════════
@@ -284,10 +272,8 @@ module.exports = {
         const modal   = new ModalBuilder().setCustomId(`ava_modal_title_${setupId}`).setTitle('Set AVA Title');
         modal.addComponents(new ActionRowBuilder().addComponents(
           new TextInputBuilder().setCustomId('title').setLabel('AVA Title')
-            .setStyle(TextInputStyle.Short)
-            .setValue(setupDrafts.get(setupId)?.title || '')
-            .setPlaceholder('e.g. Sunday AVA — Crystal League')
-            .setRequired(true).setMaxLength(100)
+            .setStyle(TextInputStyle.Short).setValue(setupDrafts.get(setupId)?.title || '')
+            .setPlaceholder('e.g. Sunday AVA — Crystal League').setRequired(true).setMaxLength(100)
         ));
         return interaction.showModal(modal);
       }
@@ -306,10 +292,8 @@ module.exports = {
         const modal   = new ModalBuilder().setCustomId(`ava_modal_desc_${setupId}`).setTitle('Set AVA Description');
         modal.addComponents(new ActionRowBuilder().addComponents(
           new TextInputBuilder().setCustomId('desc').setLabel('Description / Rules')
-            .setStyle(TextInputStyle.Paragraph)
-            .setValue(setupDrafts.get(setupId)?.description || '')
-            .setPlaceholder('Rules, requirements, notes...')
-            .setRequired(false).setMaxLength(1000)
+            .setStyle(TextInputStyle.Paragraph).setValue(setupDrafts.get(setupId)?.description || '')
+            .setPlaceholder('Rules, requirements, notes...').setRequired(false).setMaxLength(1000)
         ));
         return interaction.showModal(modal);
       }
@@ -318,7 +302,8 @@ module.exports = {
         const setupId = getSetupId(interaction.customId, 'ava_modal_desc_');
         const draft   = setupDrafts.get(setupId);
         if (!draft) return safeReply(interaction, { content: '❌ Setup session expired.', flags: MessageFlags.Ephemeral });
-        draft.description = interaction.fields.getTextInputValue('desc');
+        // FIX: save null instead of empty string so if (ava.description) works correctly
+        draft.description = interaction.fields.getTextInputValue('desc').trim() || null;
         return interaction.update({ embeds: [buildSetupEmbed(draft)], components: buildSetupRows(setupId) });
       }
 
@@ -328,10 +313,8 @@ module.exports = {
         const modal   = new ModalBuilder().setCustomId(`ava_modal_image_${setupId}`).setTitle('Set Image / GIF');
         modal.addComponents(new ActionRowBuilder().addComponents(
           new TextInputBuilder().setCustomId('imageUrl').setLabel('Image or GIF URL (direct link)')
-            .setStyle(TextInputStyle.Short)
-            .setValue(setupDrafts.get(setupId)?.imageUrl || '')
-            .setPlaceholder('https://i.imgur.com/example.gif')
-            .setRequired(false)
+            .setStyle(TextInputStyle.Short).setValue(setupDrafts.get(setupId)?.imageUrl || '')
+            .setPlaceholder('https://i.imgur.com/example.gif').setRequired(false)
         ));
         return interaction.showModal(modal);
       }
@@ -349,13 +332,9 @@ module.exports = {
         const setupId = getSetupId(interaction.customId, 'ava_setup_invite_');
         const modal   = new ModalBuilder().setCustomId(`ava_modal_invite_${setupId}`).setTitle('Set Invite Link');
         modal.addComponents(new ActionRowBuilder().addComponents(
-          new TextInputBuilder()
-            .setCustomId('inviteUrl')
-            .setLabel('Voice channel invite URL')
-            .setStyle(TextInputStyle.Short)
-            .setValue(setupDrafts.get(setupId)?.inviteUrl || '')
-            .setPlaceholder('https://discord.gg/yourlink')
-            .setRequired(false)
+          new TextInputBuilder().setCustomId('inviteUrl').setLabel('Voice channel invite URL')
+            .setStyle(TextInputStyle.Short).setValue(setupDrafts.get(setupId)?.inviteUrl || '')
+            .setPlaceholder('https://discord.gg/yourlink').setRequired(false)
         ));
         return interaction.showModal(modal);
       }
@@ -385,23 +364,29 @@ module.exports = {
             new TextInputBuilder().setCustomId('roleEmoji').setLabel('Emoji (unicode 🛡️ or custom emoji ID)')
               .setStyle(TextInputStyle.Short).setPlaceholder('e.g. 🛡️  or  1234567890123456789').setRequired(false).setMaxLength(64)
           ),
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder().setCustomId('roleDesc').setLabel('Description (shown in dropdown & embed)')
+              .setStyle(TextInputStyle.Short).setPlaceholder('e.g. Maps + Gucci Items').setRequired(false).setMaxLength(80)
+          ),
         );
         return interaction.showModal(modal);
       }
 
       if (interaction.isModalSubmit() && interaction.customId.startsWith('ava_modal_addrole_')) {
-        const setupId  = getSetupId(interaction.customId, 'ava_modal_addrole_');
-        const draft    = setupDrafts.get(setupId);
+        const setupId     = getSetupId(interaction.customId, 'ava_modal_addrole_');
+        const draft       = setupDrafts.get(setupId);
         if (!draft) return safeReply(interaction, { content: '❌ Setup session expired.', flags: MessageFlags.Ephemeral });
-        const name     = interaction.fields.getTextInputValue('roleName').trim().toUpperCase();
-        const limitRaw = interaction.fields.getTextInputValue('roleLimit').trim();
-        const emojiRaw = interaction.fields.getTextInputValue('roleEmoji').trim();
-        const limit    = limitRaw ? parseInt(limitRaw) || null : null;
-        const emoji    = emojiRaw || null;
+        const name        = interaction.fields.getTextInputValue('roleName').trim().toUpperCase();
+        const limitRaw    = interaction.fields.getTextInputValue('roleLimit').trim();
+        const emojiRaw    = interaction.fields.getTextInputValue('roleEmoji').trim();
+        const descRaw     = interaction.fields.getTextInputValue('roleDesc').trim();
+        const limit       = limitRaw ? parseInt(limitRaw) || null : null;
+        const emoji       = emojiRaw || null;
+        const description = descRaw || null;
         if (draft.roles.find(r => r.name === name)) {
           return safeReply(interaction, { content: `⚠️ Role **${name}** already exists.`, flags: MessageFlags.Ephemeral });
         }
-        draft.roles.push({ name, limit, emoji });
+        draft.roles.push({ name, limit, emoji, description });
         return interaction.update({ embeds: [buildSetupEmbed(draft)], components: buildSetupRows(setupId) });
       }
 
@@ -417,9 +402,9 @@ module.exports = {
           .setPlaceholder('Select a role to edit...');
         draft.roles.forEach(r => select.addOptions(new StringSelectMenuOptionBuilder().setLabel(r.name).setValue(r.name)));
         return safeReply(interaction, {
-          content:    'Select the role you want to edit:',
+          content: 'Select the role you want to edit:',
           components: [new ActionRowBuilder().addComponents(select)],
-          flags:      MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -441,25 +426,33 @@ module.exports = {
           ),
           new ActionRowBuilder().addComponents(
             new TextInputBuilder().setCustomId('roleEmoji').setLabel('Emoji (unicode 🛡️ or custom emoji ID)')
-              .setStyle(TextInputStyle.Short).setValue(role.emoji || '').setPlaceholder('e.g. 🛡️  or  1234567890123456789').setRequired(false).setMaxLength(64)
+              .setStyle(TextInputStyle.Short).setValue(role.emoji || '')
+              .setPlaceholder('e.g. 🛡️  or  1234567890123456789').setRequired(false).setMaxLength(64)
+          ),
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder().setCustomId('roleDesc').setLabel('Description (shown in dropdown & embed)')
+              .setStyle(TextInputStyle.Short).setValue(role.description || '')
+              .setPlaceholder('e.g. Maps + Gucci Items').setRequired(false).setMaxLength(80)
           ),
         );
         return interaction.showModal(modal);
       }
 
       if (interaction.isModalSubmit() && interaction.customId.startsWith('ava_modal_editrole_')) {
-        const parts   = interaction.customId.replace('ava_modal_editrole_', '').split('_');
-        const setupId = parts[0];
-        const oldName = parts.slice(1).join('_');
-        const draft   = setupDrafts.get(setupId);
+        const parts       = interaction.customId.replace('ava_modal_editrole_', '').split('_');
+        const setupId     = parts[0];
+        const oldName     = parts.slice(1).join('_');
+        const draft       = setupDrafts.get(setupId);
         if (!draft) return safeReply(interaction, { content: '❌ Setup session expired.', flags: MessageFlags.Ephemeral });
-        const newName  = interaction.fields.getTextInputValue('roleName').trim().toUpperCase();
-        const limitRaw = interaction.fields.getTextInputValue('roleLimit').trim();
-        const emojiRaw = interaction.fields.getTextInputValue('roleEmoji').trim();
-        const limit    = limitRaw ? parseInt(limitRaw) || null : null;
-        const emoji    = emojiRaw || null;
-        const idx      = draft.roles.findIndex(r => r.name === oldName);
-        if (idx !== -1) draft.roles[idx] = { name: newName, limit, emoji };
+        const newName     = interaction.fields.getTextInputValue('roleName').trim().toUpperCase();
+        const limitRaw    = interaction.fields.getTextInputValue('roleLimit').trim();
+        const emojiRaw    = interaction.fields.getTextInputValue('roleEmoji').trim();
+        const descRaw     = interaction.fields.getTextInputValue('roleDesc').trim();
+        const limit       = limitRaw ? parseInt(limitRaw) || null : null;
+        const emoji       = emojiRaw || null;
+        const description = descRaw || null;
+        const idx = draft.roles.findIndex(r => r.name === oldName);
+        if (idx !== -1) draft.roles[idx] = { name: newName, limit, emoji, description };
         return interaction.update({ embeds: [buildSetupEmbed(draft)], components: buildSetupRows(setupId) });
       }
 
@@ -475,9 +468,9 @@ module.exports = {
           .setPlaceholder('Select a role to remove...');
         draft.roles.forEach(r => select.addOptions(new StringSelectMenuOptionBuilder().setLabel(r.name).setValue(r.name)));
         return safeReply(interaction, {
-          content:    'Select the role to remove:',
+          content: 'Select the role to remove:',
           components: [new ActionRowBuilder().addComponents(select)],
-          flags:      MessageFlags.Ephemeral,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -486,7 +479,7 @@ module.exports = {
         const roleName = interaction.values[0];
         const draft    = setupDrafts.get(setupId);
         if (!draft) return safeReply(interaction, { content: '❌ Setup session expired.', flags: MessageFlags.Ephemeral });
-        draft.roles = draft.roles.filter(r => r.name !== roleName);
+        draft.roles    = draft.roles.filter(r => r.name !== roleName);
         return interaction.update({ embeds: [buildSetupEmbed(draft)], components: buildSetupRows(setupId) });
       }
 
@@ -510,7 +503,7 @@ module.exports = {
         const mins = parseInt(interaction.fields.getTextInputValue('minutes').trim());
         if (isNaN(mins) || mins < 1) return safeReply(interaction, { content: '❌ Please enter a valid number of minutes.', flags: MessageFlags.Ephemeral });
         draft.massMinutes = mins;
-        draft.massTime    = Date.now() + mins * 60 * 1000; // preview only, recalculated at launch
+        draft.massTime    = Date.now() + mins * 60 * 1000;
         return interaction.update({ embeds: [buildSetupEmbed(draft)], components: buildSetupRows(setupId) });
       }
 
@@ -520,10 +513,8 @@ module.exports = {
         const modal   = new ModalBuilder().setCustomId(`ava_modal_massmsg_${setupId}`).setTitle('Set Mass Message');
         modal.addComponents(new ActionRowBuilder().addComponents(
           new TextInputBuilder().setCustomId('msg').setLabel('Message sent when mass starts')
-            .setStyle(TextInputStyle.Paragraph)
-            .setValue(setupDrafts.get(setupId)?.massMessage || '')
-            .setPlaceholder('e.g. ⚔️ AVA is starting! Head to the voice channel NOW!')
-            .setRequired(true).setMaxLength(500)
+            .setStyle(TextInputStyle.Paragraph).setValue(setupDrafts.get(setupId)?.massMessage || '')
+            .setPlaceholder('e.g. ⚔️ AVA is starting! Head to the voice channel NOW!').setRequired(true).setMaxLength(500)
         ));
         return interaction.showModal(modal);
       }
@@ -541,13 +532,9 @@ module.exports = {
         const setupId = getSetupId(interaction.customId, 'ava_setup_pingrole_');
         const modal   = new ModalBuilder().setCustomId(`ava_modal_pingrole_${setupId}`).setTitle('Set Ping Role');
         modal.addComponents(new ActionRowBuilder().addComponents(
-          new TextInputBuilder()
-            .setCustomId('roleId')
-            .setLabel('Role ID to ping when embed launches')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('Right-click the role → Copy ID')
-            .setValue(setupDrafts.get(setupId)?.pingRoleId || '')
-            .setRequired(false)
+          new TextInputBuilder().setCustomId('roleId').setLabel('Role ID to ping when embed launches')
+            .setStyle(TextInputStyle.Short).setPlaceholder('Right-click the role → Copy ID')
+            .setValue(setupDrafts.get(setupId)?.pingRoleId || '').setRequired(false)
         ));
         return interaction.showModal(modal);
       }
@@ -561,42 +548,62 @@ module.exports = {
       }
 
       // ── Pre-fill Member ───────────────────────────────────────────
+      // FIX: collapsed to single modal shown directly from button click.
+      // The old 2-step flow (button → ephemeral select → modal) broke because
+      // Discord does not allow showModal() from a select inside a followUp/safeReply.
       if (interaction.isButton() && interaction.customId.startsWith('ava_setup_prefill_')) {
         const setupId = getSetupId(interaction.customId, 'ava_setup_prefill_');
         const draft   = setupDrafts.get(setupId);
         if (!draft) return safeReply(interaction, { content: '❌ Setup session expired.', flags: MessageFlags.Ephemeral });
         if (draft.roles.length === 0) return safeReply(interaction, { content: '❌ Add at least one role first.', flags: MessageFlags.Ephemeral });
 
-        const modal = new ModalBuilder().setCustomId(`ava_modal_prefill_${setupId}`).setTitle('Pre-fill Member');
+        const modal = new ModalBuilder()
+          .setCustomId(`ava_modal_prefill_${setupId}`)
+          .setTitle('Pre-fill Member');
         modal.addComponents(
           new ActionRowBuilder().addComponents(
-            new TextInputBuilder().setCustomId('userId').setLabel('User ID')
-              .setStyle(TextInputStyle.Short).setPlaceholder('Right-click the user → Copy ID').setRequired(true).setMaxLength(20)
+            new TextInputBuilder().setCustomId('roleName')
+              .setLabel('Role Name')
+              .setStyle(TextInputStyle.Short)
+              .setPlaceholder(draft.roles[0]?.name ?? 'MAIN TANK')
+              .setRequired(true).setMaxLength(50)
           ),
           new ActionRowBuilder().addComponents(
-            new TextInputBuilder().setCustomId('roleName').setLabel('Role to assign')
+            new TextInputBuilder().setCustomId('userMention')
+              .setLabel('User ID  (right-click user → Copy ID)')
               .setStyle(TextInputStyle.Short)
-              .setPlaceholder(`e.g. ${draft.roles.map(r => r.name).join(' / ')}`)
-              .setRequired(true).setMaxLength(50)
+              .setPlaceholder('123456789012345678')
+              .setRequired(true).setMaxLength(20)
           ),
         );
         return interaction.showModal(modal);
       }
 
       if (interaction.isModalSubmit() && interaction.customId.startsWith('ava_modal_prefill_')) {
-        const setupId     = getSetupId(interaction.customId, 'ava_modal_prefill_');
-        const draft       = setupDrafts.get(setupId);
+        const setupId = interaction.customId.replace('ava_modal_prefill_', '');
+        const draft   = setupDrafts.get(setupId);
         if (!draft) return safeReply(interaction, { content: '❌ Setup session expired.', flags: MessageFlags.Ephemeral });
-        const userId      = interaction.fields.getTextInputValue('userId').trim();
+
         const roleNameRaw = interaction.fields.getTextInputValue('roleName').trim().toUpperCase();
         const role        = draft.roles.find(r => r.name === roleNameRaw);
-        if (!role) return safeReply(interaction, { content: `❌ Role **${roleNameRaw}** not found. Available: ${draft.roles.map(r => r.name).join(', ')}`, flags: MessageFlags.Ephemeral });
-        if (draft.signups[userId]) return safeReply(interaction, { content: `⚠️ <@${userId}> is already pre-filled as **${draft.signups[userId].assignedRole}**.`, flags: MessageFlags.Ephemeral });
+        if (!role) {
+          const available = draft.roles.map(r => r.name).join(', ');
+          return safeReply(interaction, { content: `❌ Role **${roleNameRaw}** not found.\nAvailable: ${available}`, flags: MessageFlags.Ephemeral });
+        }
+
+        const raw    = interaction.fields.getTextInputValue('userMention').trim();
+        const userId = raw.replace(/[^0-9]/g, '');
+        if (!userId || userId.length < 15) return safeReply(interaction, { content: '❌ Invalid User ID. Right-click the user and choose **Copy ID**.', flags: MessageFlags.Ephemeral });
+
+        if (draft.signups[userId]) return safeReply(interaction, { content: `⚠️ <@${userId}> is already pre-filled.`, flags: MessageFlags.Ephemeral });
+
         const count = Object.values(draft.signups).filter(s => s.assignedRole === role.name && s.status === 'accepted').length;
-        if (role.limit && count >= role.limit) return safeReply(interaction, { content: `❌ **${role.name}** is already full in the draft (${count}/${role.limit}).`, flags: MessageFlags.Ephemeral });
+        if (role.limit && count >= role.limit) return safeReply(interaction, { content: `❌ **${role.name}** is already full in the draft.`, flags: MessageFlags.Ephemeral });
+
         let targetUser;
         try { targetUser = await interaction.client.users.fetch(userId); }
-        catch { return safeReply(interaction, { content: `❌ Could not find user with ID \`${userId}\`.`, flags: MessageFlags.Ephemeral }); }
+        catch { return safeReply(interaction, { content: `❌ Could not find user with ID \`${userId}\`. Make sure they share a server with the bot.`, flags: MessageFlags.Ephemeral }); }
+
         draft.signups[userId] = {
           userId, username: targetUser.tag,
           selectedRole: role.name, assignedRole: role.name,
@@ -616,10 +623,10 @@ module.exports = {
       if (interaction.isButton() && interaction.customId.startsWith('ava_setup_launch_')) {
         const setupId = getSetupId(interaction.customId, 'ava_setup_launch_');
         const draft   = setupDrafts.get(setupId);
-        if (!draft)                 return safeReply(interaction, { content: '❌ Setup session expired.',              flags: MessageFlags.Ephemeral });
-        if (!draft.title)           return safeReply(interaction, { content: '❌ Please set a title first.',           flags: MessageFlags.Ephemeral });
-        if (!draft.roles.length)    return safeReply(interaction, { content: '❌ Please add at least one role.',       flags: MessageFlags.Ephemeral });
-        if (!draft.massMinutes)     return safeReply(interaction, { content: '❌ Please set a mass timer first.',      flags: MessageFlags.Ephemeral });
+        if (!draft)              return safeReply(interaction, { content: '❌ Setup session expired.',        flags: MessageFlags.Ephemeral });
+        if (!draft.title)        return safeReply(interaction, { content: '❌ Please set a title first.',     flags: MessageFlags.Ephemeral });
+        if (!draft.roles.length) return safeReply(interaction, { content: '❌ Please add at least one role.', flags: MessageFlags.Ephemeral });
+        if (!draft.massMinutes)  return safeReply(interaction, { content: '❌ Please set a mass timer first.', flags: MessageFlags.Ephemeral });
 
         const channel = await interaction.guild.channels.fetch(draft.channelId).catch(() => null);
         if (!channel) return safeReply(interaction, { content: '❌ Could not find the channel.', flags: MessageFlags.Ephemeral });
@@ -627,7 +634,6 @@ module.exports = {
         const launchTime = Date.now();
         const massTime   = launchTime + draft.massMinutes * 60 * 1000;
 
-        // Send temp embed first to get message ID
         const tempEmbed = buildAvaEmbed({ ...draft, messageId: 'pending', massTime, active: true });
         const liveMsg   = await channel.send({ embeds: [tempEmbed] });
 
@@ -635,23 +641,25 @@ module.exports = {
           ...draft,
           messageId:   liveMsg.id,
           channelId:   channel.id,
+          guildId,
           launchedAt:  launchTime,
           active:      true,
-          signups:     { ...draft.signups }, // carry over pre-filled members
+          signups:     { ...draft.signups },
           massTime,
           massMinutes: draft.massMinutes,
+          hostPanelMsgId:      null,
+          hostPanelSelected:   null,
+          hostPanelMode:       'pending',
+          managePanelSelected: null,
         };
 
-        // Auto-signup host as MAIN TANK if not already pre-filled
+        // Auto-signup host as MAIN TANK if slot exists and not already in
         const mainTankRole = avaData.roles.find(r => r.name === 'MAIN TANK');
         if (mainTankRole && !avaData.signups[avaData.hostId]) {
           avaData.signups[avaData.hostId] = {
-            userId:       avaData.hostId,
-            username:     interaction.user.tag,
-            selectedRole: 'MAIN TANK',
-            assignedRole: 'MAIN TANK',
-            status:       'accepted',
-            timestamp:    launchTime,
+            userId: avaData.hostId, username: interaction.user.tag,
+            selectedRole: 'MAIN TANK', assignedRole: 'MAIN TANK',
+            status: 'accepted', timestamp: launchTime,
           };
         }
 
@@ -659,43 +667,21 @@ module.exports = {
         saveAva(liveMsg.id, avaData);
         setupDrafts.delete(setupId);
 
-        // Edit with real messageId so components work
         await liveMsg.edit({
           embeds:     [buildAvaEmbed(avaData)],
           components: buildAvaComponents(avaData),
         });
 
-        // Ping role if set
         if (avaData.pingRoleId) {
           await channel.send({ content: `<@&${avaData.pingRoleId}>` });
         }
 
         scheduleMass(interaction.client, liveMsg.id, avaData);
 
-        // DM host control panel
-        try {
-          const hostUser = await interaction.client.users.fetch(avaData.hostId);
-          await hostUser.send({
-            content: [
-              `⚔️ **Your AVA has been launched!**`,
-              `🔗 [Jump to embed](https://discord.com/channels/${guildId}/${channel.id}/${liveMsg.id})`,
-              ``,
-              `⏰ Mass starts: <t:${Math.floor(massTime / 1000)}:R> (<t:${Math.floor(massTime / 1000)}:t>)`,
-              ``,
-              `Use the buttons below to manage your AVA.`,
-            ].join('\n'),
-            components: [
-              new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId(`ava_manage_${liveMsg.id}`).setLabel('⚙️ Manage Members').setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId(`ava_edittimer_${liveMsg.id}`).setLabel('⏰ Edit Mass Timer').setStyle(ButtonStyle.Primary),
-                new ButtonBuilder().setCustomId(`ava_cancelava_${liveMsg.id}`).setLabel('🗑️ Cancel AVA').setStyle(ButtonStyle.Danger),
-              ),
-            ],
-          });
-        } catch { console.warn('⚠️ Could not DM host.'); }
+        await updateHostPanel(interaction.client, avaData);
 
         return interaction.update({
-          content:    `✅ AVA launched! [Jump to embed](https://discord.com/channels/${guildId}/${channel.id}/${liveMsg.id})\n⏰ Mass starts <t:${Math.floor(massTime / 1000)}:R>\n📬 Management panel sent to your DMs.`,
+          content:    `✅ AVA launched! [Jump to embed](https://discord.com/channels/${guildId}/${channel.id}/${liveMsg.id})\n⏰ Mass starts <t:${Math.floor(massTime / 1000)}:R>\n📬 Control panel sent to your DMs.`,
           embeds:     [],
           components: [],
         });
@@ -705,7 +691,6 @@ module.exports = {
       // USER INTERACTIONS (live embed)
       // ══════════════════════════════════════════════════════════════
 
-      // ── Select role ───────────────────────────────────────────────
       if (interaction.isStringSelectMenu() && interaction.customId.startsWith('ava_select_role_')) {
         const messageId    = interaction.customId.replace('ava_select_role_', '');
         const ava          = getAva(messageId);
@@ -720,13 +705,14 @@ module.exports = {
             return safeReply(interaction, { content: `ℹ️ You are already accepted as **${selectedRole}**.`, flags: MessageFlags.Ephemeral });
           }
           delete ava.signups[userId];
-          if (ava.pendingApprovals) delete ava.pendingApprovals[userId];
         }
 
         const role         = ava.roles.find(r => r.name === selectedRole);
-        const currentCount = Object.values(ava.signups).filter(s => s.assignedRole === selectedRole && s.status === 'accepted').length;
-        if (role?.limit && currentCount >= role.limit) {
-          return safeReply(interaction, { content: `❌ **${selectedRole}** is full (${currentCount}/${role.limit}).`, flags: MessageFlags.Ephemeral });
+        const acceptedCount = Object.values(ava.signups).filter(
+          s => s.assignedRole === selectedRole && s.status === 'accepted'
+        ).length;
+        if (role?.limit && acceptedCount >= role.limit) {
+          return safeReply(interaction, { content: `❌ **${selectedRole}** is full (${acceptedCount}/${role.limit}).`, flags: MessageFlags.Ephemeral });
         }
 
         ava.signups[userId] = {
@@ -735,18 +721,11 @@ module.exports = {
           status: 'pending', timestamp: Date.now(),
         };
 
+        ava.hostPanelSelected = ava.hostPanelSelected || null;
+
         saveAva(messageId, ava);
         await updateAvaEmbed(interaction.client, ava);
-
-        try {
-          const host      = await interaction.client.users.fetch(ava.hostId);
-          const panelData = buildHostPanel({ ...ava, messageId }, userId);
-          const dmMsg     = await host.send(panelData);
-          ava.signups[userId].panelMsgId = dmMsg.id;
-          if (!ava.pendingApprovals) ava.pendingApprovals = {};
-          ava.pendingApprovals[userId] = { panelMsgId: dmMsg.id };
-          saveAva(messageId, ava);
-        } catch (err) { console.error('❌ Could not DM host:', err); }
+        await updateHostPanel(interaction.client, ava);
 
         return safeReply(interaction, {
           content: `📬 You've signed up for **${selectedRole}**! Waiting for host approval.`,
@@ -758,17 +737,19 @@ module.exports = {
       if (interaction.isButton() && interaction.customId.startsWith('ava_leave_')) {
         const messageId = interaction.customId.replace('ava_leave_', '');
         const ava       = getAva(messageId);
-        if (!ava)          return safeReply(interaction, { content: '❌ AVA not found.',              flags: MessageFlags.Ephemeral });
-        if (!ava.active)   return safeReply(interaction, { content: '❌ This AVA has already ended.', flags: MessageFlags.Ephemeral });
+        if (!ava)        return safeReply(interaction, { content: '❌ AVA not found.',              flags: MessageFlags.Ephemeral });
+        if (!ava.active) return safeReply(interaction, { content: '❌ This AVA has already ended.', flags: MessageFlags.Ephemeral });
 
         const userId = interaction.user.id;
         if (!ava.signups[userId]) return safeReply(interaction, { content: '❌ You are not signed up.', flags: MessageFlags.Ephemeral });
 
         const roleName = ava.signups[userId].assignedRole || ava.signups[userId].selectedRole;
         delete ava.signups[userId];
-        if (ava.pendingApprovals) delete ava.pendingApprovals[userId];
+        if (ava.hostPanelSelected === userId) ava.hostPanelSelected = null;
+        if (ava.managePanelSelected === userId) ava.managePanelSelected = null;
         saveAva(messageId, ava);
         await updateAvaEmbed(interaction.client, ava);
+        await updateHostPanel(interaction.client, ava);
 
         return safeReply(interaction, {
           content: `✅ You have left the AVA. Your **${roleName}** slot is now available.`,
@@ -782,7 +763,6 @@ module.exports = {
         const ava       = getAva(messageId);
         const signup    = ava?.signups[interaction.user.id];
         if (!signup) return safeReply(interaction, { content: '❌ You are not signed up for this AVA.', flags: MessageFlags.Ephemeral });
-
         const statusEmoji = { pending: '⏳', accepted: '✅', rejected: '❌' }[signup.status] || '❓';
         return safeReply(interaction, {
           content: [
@@ -796,207 +776,229 @@ module.exports = {
       }
 
       // ══════════════════════════════════════════════════════════════
-      // HOST PANEL (DMs — new applicants)
+      // HOST LIVE PANEL INTERACTIONS (DMs)
       // ══════════════════════════════════════════════════════════════
 
-      if (interaction.isStringSelectMenu() && interaction.customId.startsWith('ava_host_changerole_')) {
-        const parts       = interaction.customId.replace('ava_host_changerole_', '').split('_');
-        const messageId   = parts[0];
-        const applicantId = parts[1];
-        const ava         = getAva(messageId);
-        if (!ava || !ava.signups[applicantId]) return;
-        ava.signups[applicantId].assignedRole = interaction.values[0];
+      // ── Toggle between pending and manage view ────────────────────
+      if (interaction.isButton() && interaction.customId.startsWith('ava_hp_togglemanage_')) {
+        const messageId = interaction.customId.replace('ava_hp_togglemanage_', '');
+        const ava       = getAva(messageId);
+        if (!ava) return safeReply(interaction, { content: '❌ AVA not found.', flags: MessageFlags.Ephemeral });
+        ava.hostPanelMode       = ava.hostPanelMode === 'manage' ? 'pending' : 'manage';
+        ava.managePanelSelected = null;
         saveAva(messageId, ava);
-        return safeReply(interaction, { content: `✅ Role changed to **${interaction.values[0]}**. Press Accept to confirm.`, flags: MessageFlags.Ephemeral });
+        return interaction.update(buildLiveHostPanel(ava));
       }
 
-      if (interaction.isButton() && interaction.customId.startsWith('ava_host_accept_')) {
-        const parts       = interaction.customId.replace('ava_host_accept_', '').split('_');
-        const messageId   = parts[0];
-        const applicantId = parts[1];
+      // ── Pick applicant (pending view) ─────────────────────────────
+      if (interaction.isStringSelectMenu() && interaction.customId.startsWith('ava_hp_pick_')) {
+        const messageId   = interaction.customId.replace('ava_hp_pick_', '');
         const ava         = getAva(messageId);
-        if (!ava || !ava.signups[applicantId]) return safeReply(interaction, { content: '❌ Signup not found.', flags: MessageFlags.Ephemeral });
+        if (!ava) return safeReply(interaction, { content: '❌ AVA not found.', flags: MessageFlags.Ephemeral });
+        ava.hostPanelSelected = interaction.values[0];
+        saveAva(messageId, ava);
+        return interaction.update(buildLiveHostPanel(ava));
+      }
 
-        const signup = ava.signups[applicantId];
-        const role   = ava.roles.find(r => r.name === (signup.assignedRole || signup.selectedRole));
-        const count  = Object.values(ava.signups).filter(s => s.assignedRole === role?.name && s.status === 'accepted' && s.userId !== applicantId).length;
-        if (role?.limit && count >= role.limit) return safeReply(interaction, { content: `❌ **${role.name}** is full. Change the role first.`, flags: MessageFlags.Ephemeral });
+      // ── Change role (redirect applicant before accepting) ─────────
+      if (interaction.isStringSelectMenu() && interaction.customId.startsWith('ava_hp_changerole_')) {
+        const messageId   = interaction.customId.replace('ava_hp_changerole_', '');
+        const ava         = getAva(messageId);
+        if (!ava || !ava.hostPanelSelected) return safeReply(interaction, { content: '❌ No applicant selected.', flags: MessageFlags.Ephemeral });
+        const signup = ava.signups[ava.hostPanelSelected];
+        if (!signup) return safeReply(interaction, { content: '❌ Applicant not found.', flags: MessageFlags.Ephemeral });
+        signup.assignedRole = interaction.values[0];
+        saveAva(messageId, ava);
+        return interaction.update(buildLiveHostPanel(ava));
+      }
+
+      // ── Accept ────────────────────────────────────────────────────
+      if (interaction.isButton() && interaction.customId.startsWith('ava_hp_accept_')) {
+        const messageId   = interaction.customId.replace('ava_hp_accept_', '');
+        const ava         = getAva(messageId);
+        if (!ava || !ava.hostPanelSelected) return safeReply(interaction, { content: '❌ No applicant selected.', flags: MessageFlags.Ephemeral });
+        const applicantId = ava.hostPanelSelected;
+        const signup      = ava.signups[applicantId];
+        if (!signup) return safeReply(interaction, { content: '❌ Applicant not found.', flags: MessageFlags.Ephemeral });
+
+        const role  = ava.roles.find(r => r.name === (signup.assignedRole || signup.selectedRole));
+        const count = Object.values(ava.signups).filter(
+          s => s.assignedRole === role?.name && s.status === 'accepted' && s.userId !== applicantId
+        ).length;
+        if (role?.limit && count >= role.limit) {
+          return safeReply(interaction, { content: `❌ **${role.name}** is full. Change the role first.`, flags: MessageFlags.Ephemeral });
+        }
 
         signup.status       = 'accepted';
         signup.assignedRole = signup.assignedRole || signup.selectedRole;
-        if (ava.pendingApprovals) delete ava.pendingApprovals[applicantId];
+        ava.hostPanelSelected = null;
         saveAva(messageId, ava);
         await updateAvaEmbed(interaction.client, ava);
 
-        try { await (await interaction.client.users.fetch(applicantId)).send(`✅ Your signup for **${ava.title}** has been **accepted**! You are assigned as **${signup.assignedRole}**.`); } catch {}
-        return interaction.update({ content: `✅ **${signup.username}** accepted as **${signup.assignedRole}**.`, embeds: [], components: [] });
+        // try { await (await interaction.client.users.fetch(applicantId)).send(`✅ Your signup for **${ava.title}** has been **accepted**! You are assigned as **${signup.assignedRole}**.`); } catch {}
+
+        return interaction.update(buildLiveHostPanel(ava));
       }
 
-      if (interaction.isButton() && interaction.customId.startsWith('ava_host_reject_')) {
-        const parts       = interaction.customId.replace('ava_host_reject_', '').split('_');
-        const messageId   = parts[0];
-        const applicantId = parts[1];
+      // ── Reject ────────────────────────────────────────────────────
+      if (interaction.isButton() && interaction.customId.startsWith('ava_hp_reject_')) {
+        const messageId   = interaction.customId.replace('ava_hp_reject_', '');
         const ava         = getAva(messageId);
-        if (!ava || !ava.signups[applicantId]) return safeReply(interaction, { content: '❌ Signup not found.', flags: MessageFlags.Ephemeral });
+        if (!ava || !ava.hostPanelSelected) return safeReply(interaction, { content: '❌ No applicant selected.', flags: MessageFlags.Ephemeral });
+        const applicantId = ava.hostPanelSelected;
+        const signup      = ava.signups[applicantId];
+        if (!signup) return safeReply(interaction, { content: '❌ Applicant not found.', flags: MessageFlags.Ephemeral });
 
-        const signup  = ava.signups[applicantId];
-        signup.status = 'rejected';
-        if (ava.pendingApprovals) delete ava.pendingApprovals[applicantId];
+        signup.status         = 'rejected';
+        ava.hostPanelSelected = null;
         saveAva(messageId, ava);
         await updateAvaEmbed(interaction.client, ava);
 
-        try { await (await interaction.client.users.fetch(applicantId)).send(`❌ Your signup for **${ava.title}** has been **rejected**.`); } catch {}
-        return interaction.update({ content: `❌ **${signup.username}** rejected.`, embeds: [], components: [] });
+        // try { await (await interaction.client.users.fetch(applicantId)).send(`❌ Your signup for **${ava.title}** has been **rejected**.`); } catch {}
+
+        return interaction.update(buildLiveHostPanel(ava));
       }
 
-      if (interaction.isButton() && interaction.customId.startsWith('ava_host_remove_')) {
-        const parts       = interaction.customId.replace('ava_host_remove_', '').split('_');
-        const messageId   = parts[0];
-        const applicantId = parts[1];
+      // ── Remove (from pending view) ────────────────────────────────
+      if (interaction.isButton() && interaction.customId.startsWith('ava_hp_remove_')) {
+        const messageId   = interaction.customId.replace('ava_hp_remove_', '');
         const ava         = getAva(messageId);
-        if (!ava || !ava.signups[applicantId]) return safeReply(interaction, { content: '❌ Signup not found.', flags: MessageFlags.Ephemeral });
+        if (!ava || !ava.hostPanelSelected) return safeReply(interaction, { content: '❌ No applicant selected.', flags: MessageFlags.Ephemeral });
+        const applicantId = ava.hostPanelSelected;
+        const signup      = ava.signups[applicantId];
+        if (!signup) return safeReply(interaction, { content: '❌ Applicant not found.', flags: MessageFlags.Ephemeral });
 
-        const signup = ava.signups[applicantId];
         delete ava.signups[applicantId];
-        if (ava.pendingApprovals) delete ava.pendingApprovals[applicantId];
+        ava.hostPanelSelected = null;
         saveAva(messageId, ava);
         await updateAvaEmbed(interaction.client, ava);
 
-        try { await (await interaction.client.users.fetch(applicantId)).send(`⚠️ You have been **removed** from the AVA **${ava.title}**.`); } catch {}
-        return interaction.update({ content: `🗑️ **${signup.username}** removed.`, embeds: [], components: [] });
+        // try { await (await interaction.client.users.fetch(applicantId)).send(`⚠️ You have been **removed** from the AVA **${ava.title}**.`); } catch {}
+
+        return interaction.update(buildLiveHostPanel(ava));
       }
 
       // ══════════════════════════════════════════════════════════════
-      // MANAGE ACCEPTED MEMBERS
+      // MANAGE VIEW INTERACTIONS (inline in host DM panel)
       // ══════════════════════════════════════════════════════════════
 
-      if (interaction.isButton() && interaction.customId.startsWith('ava_manage_') &&
-          !interaction.customId.startsWith('ava_manage_select_') &&
-          !interaction.customId.startsWith('ava_manage_changerole_') &&
-          !interaction.customId.startsWith('ava_manage_remove_') &&
-          !interaction.customId.startsWith('ava_manage_addmember_')) {
-
-        const messageId = interaction.customId.replace('ava_manage_', '');
+      // ── Select member in manage view ──────────────────────────────
+      if (interaction.isStringSelectMenu() && interaction.customId.startsWith('ava_hp_manageselect_')) {
+        const messageId = interaction.customId.replace('ava_hp_manageselect_', '');
         const ava       = getAva(messageId);
         if (!ava) return safeReply(interaction, { content: '❌ AVA not found.', flags: MessageFlags.Ephemeral });
-        if (interaction.user.id !== ava.hostId) return safeReply(interaction, { content: '❌ Only the host can manage members.', flags: MessageFlags.Ephemeral });
-
-        try {
-          await (await interaction.client.users.fetch(ava.hostId)).send(buildManagePanel(ava));
-          return safeReply(interaction, { content: '📬 Management panel sent to your DMs.', flags: MessageFlags.Ephemeral });
-        } catch {
-          return safeReply(interaction, { content: '❌ Could not DM you. Enable DMs from server members.', flags: MessageFlags.Ephemeral });
-        }
+        ava.managePanelSelected = interaction.values[0];
+        saveAva(messageId, ava);
+        return interaction.update(buildLiveHostPanel(ava));
       }
 
-      if (interaction.isStringSelectMenu() && interaction.customId.startsWith('ava_manage_select_')) {
-        const messageId   = interaction.customId.replace('ava_manage_select_', '');
-        const applicantId = interaction.values[0];
+      // ── Change role for selected member (manage view) ─────────────
+      if (interaction.isStringSelectMenu() && interaction.customId.startsWith('ava_hp_managechangerole_')) {
+        const messageId   = interaction.customId.replace('ava_hp_managechangerole_', '');
         const ava         = getAva(messageId);
-        if (!ava || !ava.signups[applicantId]) return safeReply(interaction, { content: '❌ Member not found.', flags: MessageFlags.Ephemeral });
-
-        const signup     = ava.signups[applicantId];
-        const roleSelect = new StringSelectMenuBuilder()
-          .setCustomId(`ava_manage_changerole_${messageId}_${applicantId}`)
-          .setPlaceholder(`Change role (current: ${signup.assignedRole})...`);
-        ava.roles.forEach(role => roleSelect.addOptions(
-          new StringSelectMenuOptionBuilder().setLabel(role.name).setValue(role.name).setDefault(role.name === signup.assignedRole)
-        ));
-
-        return safeReply(interaction, {
-          content: `Managing **${signup.username}** (currently **${signup.assignedRole}**):`,
-          components: [
-            new ActionRowBuilder().addComponents(roleSelect),
-            new ActionRowBuilder().addComponents(
-              new ButtonBuilder().setCustomId(`ava_manage_remove_${messageId}_${applicantId}`).setLabel('Remove from AVA').setEmoji('🗑️').setStyle(ButtonStyle.Danger)
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        });
-      }
-
-      if (interaction.isStringSelectMenu() && interaction.customId.startsWith('ava_manage_changerole_')) {
-        const parts       = interaction.customId.replace('ava_manage_changerole_', '').split('_');
-        const messageId   = parts[0];
-        const applicantId = parts[1];
+        if (!ava || !ava.managePanelSelected) return safeReply(interaction, { content: '❌ No member selected.', flags: MessageFlags.Ephemeral });
+        const applicantId = ava.managePanelSelected;
         const newRole     = interaction.values[0];
-        const ava         = getAva(messageId);
-        if (!ava || !ava.signups[applicantId]) return safeReply(interaction, { content: '❌ Member not found.', flags: MessageFlags.Ephemeral });
+        const signup      = ava.signups[applicantId];
+        if (!signup) return safeReply(interaction, { content: '❌ Member not found.', flags: MessageFlags.Ephemeral });
 
         const role  = ava.roles.find(r => r.name === newRole);
         const count = Object.values(ava.signups).filter(s => s.assignedRole === newRole && s.status === 'accepted' && s.userId !== applicantId).length;
         if (role?.limit && count >= role.limit) return safeReply(interaction, { content: `❌ **${newRole}** is full.`, flags: MessageFlags.Ephemeral });
 
-        const signup  = ava.signups[applicantId];
         const oldRole = signup.assignedRole;
         signup.assignedRole = newRole;
         saveAva(messageId, ava);
         await updateAvaEmbed(interaction.client, ava);
 
-        try { await (await interaction.client.users.fetch(applicantId)).send(`🔄 Your role in **${ava.title}** changed from **${oldRole}** → **${newRole}**.`); } catch {}
-        return safeReply(interaction, { content: `✅ **${signup.username}** moved from **${oldRole}** → **${newRole}**.`, flags: MessageFlags.Ephemeral });
+        // try { await (await interaction.client.users.fetch(applicantId)).send(`🔄 Your role in **${ava.title}** changed from **${oldRole}** → **${newRole}**.`); } catch {}
+
+        return interaction.update(buildLiveHostPanel(ava));
       }
 
-      if (interaction.isButton() && interaction.customId.startsWith('ava_manage_remove_')) {
-        const parts       = interaction.customId.replace('ava_manage_remove_', '').split('_');
-        const messageId   = parts[0];
-        const applicantId = parts[1];
+      // ── Remove member (manage view) ───────────────────────────────
+      if (interaction.isButton() && interaction.customId.startsWith('ava_hp_manageremove_')) {
+        const messageId   = interaction.customId.replace('ava_hp_manageremove_', '');
         const ava         = getAva(messageId);
-        if (!ava || !ava.signups[applicantId]) return safeReply(interaction, { content: '❌ Member not found.', flags: MessageFlags.Ephemeral });
+        if (!ava || !ava.managePanelSelected) return safeReply(interaction, { content: '❌ No member selected.', flags: MessageFlags.Ephemeral });
+        const applicantId = ava.managePanelSelected;
+        const signup      = ava.signups[applicantId];
+        if (!signup) return safeReply(interaction, { content: '❌ Member not found.', flags: MessageFlags.Ephemeral });
 
-        const signup = ava.signups[applicantId];
         delete ava.signups[applicantId];
-        if (ava.pendingApprovals) delete ava.pendingApprovals[applicantId];
+        ava.managePanelSelected = null;
+        if (ava.hostPanelSelected === applicantId) ava.hostPanelSelected = null;
         saveAva(messageId, ava);
         await updateAvaEmbed(interaction.client, ava);
 
-        try { await (await interaction.client.users.fetch(applicantId)).send(`⚠️ You have been **removed** from **${ava.title}** by the host.`); } catch {}
-        return safeReply(interaction, { content: `🗑️ **${signup.username}** removed.`, flags: MessageFlags.Ephemeral });
+        // try { await (await interaction.client.users.fetch(applicantId)).send(`⚠️ You have been **removed** from **${ava.title}** by the host.`); } catch {}
+
+        return interaction.update(buildLiveHostPanel(ava));
       }
 
-      // ── Add Member (manage panel) ─────────────────────────────────
+      // ── Add member button → open modal directly ───────────────────
+      // FIX: collapsed to single modal shown directly from button click.
+      // The old 2-step flow (button → ephemeral select → modal) broke because
+      // Discord does not allow showModal() from a select inside a followUp/safeReply.
       if (interaction.isButton() && interaction.customId.startsWith('ava_manage_addmember_')) {
         const messageId = interaction.customId.replace('ava_manage_addmember_', '');
         const ava       = getAva(messageId);
         if (!ava) return safeReply(interaction, { content: '❌ AVA not found.', flags: MessageFlags.Ephemeral });
         if (interaction.user.id !== ava.hostId) return safeReply(interaction, { content: '❌ Only the host can add members.', flags: MessageFlags.Ephemeral });
 
-        const modal = new ModalBuilder().setCustomId(`ava_modal_addmember_${messageId}`).setTitle('Add Member to AVA');
+        const modal = new ModalBuilder()
+          .setCustomId(`ava_modal_addmember_${messageId}`)
+          .setTitle('Add Member');
         modal.addComponents(
           new ActionRowBuilder().addComponents(
-            new TextInputBuilder().setCustomId('userId').setLabel('User ID')
-              .setStyle(TextInputStyle.Short).setPlaceholder('Right-click the user → Copy ID').setRequired(true).setMaxLength(20)
+            new TextInputBuilder().setCustomId('roleName')
+              .setLabel('Role Name')
+              .setStyle(TextInputStyle.Short)
+              .setPlaceholder(ava.roles[0]?.name ?? 'MAIN TANK')
+              .setRequired(true).setMaxLength(50)
           ),
           new ActionRowBuilder().addComponents(
-            new TextInputBuilder().setCustomId('roleName').setLabel('Role to assign')
-              .setStyle(TextInputStyle.Short).setPlaceholder(`e.g. ${ava.roles.map(r => r.name).join(' / ')}`).setRequired(true).setMaxLength(50)
+            new TextInputBuilder().setCustomId('userMention')
+              .setLabel('User ID  (right-click user → Copy ID)')
+              .setStyle(TextInputStyle.Short)
+              .setPlaceholder('123456789012345678')
+              .setRequired(true).setMaxLength(20)
           ),
         );
         return interaction.showModal(modal);
       }
 
+      // ── Add member: modal submitted ────────────────────────────────
       if (interaction.isModalSubmit() && interaction.customId.startsWith('ava_modal_addmember_')) {
-        const messageId   = interaction.customId.replace('ava_modal_addmember_', '');
-        const ava         = getAva(messageId);
+        const messageId = interaction.customId.replace('ava_modal_addmember_', '');
+        const ava       = getAva(messageId);
         if (!ava) return safeReply(interaction, { content: '❌ AVA not found.', flags: MessageFlags.Ephemeral });
         if (interaction.user.id !== ava.hostId) return safeReply(interaction, { content: '❌ Only the host can add members.', flags: MessageFlags.Ephemeral });
 
-        const userId      = interaction.fields.getTextInputValue('userId').trim();
         const roleNameRaw = interaction.fields.getTextInputValue('roleName').trim().toUpperCase();
         const role        = ava.roles.find(r => r.name === roleNameRaw);
-        if (!role) return safeReply(interaction, { content: `❌ Role **${roleNameRaw}** not found. Available: ${ava.roles.map(r => r.name).join(', ')}`, flags: MessageFlags.Ephemeral });
-        if (ava.signups[userId]) return safeReply(interaction, { content: `⚠️ <@${userId}> is already in this AVA as **${ava.signups[userId].assignedRole || ava.signups[userId].selectedRole}**.`, flags: MessageFlags.Ephemeral });
+        if (!role) {
+          const available = ava.roles.map(r => r.name).join(', ');
+          return safeReply(interaction, { content: `❌ Role **${roleNameRaw}** not found.\nAvailable: ${available}`, flags: MessageFlags.Ephemeral });
+        }
+
+        const raw    = interaction.fields.getTextInputValue('userMention').trim();
+        const userId = raw.replace(/[^0-9]/g, '');
+        if (!userId || userId.length < 15) return safeReply(interaction, { content: '❌ Invalid User ID. Right-click the user and choose **Copy ID**.', flags: MessageFlags.Ephemeral });
+
+        if (ava.signups[userId]) return safeReply(interaction, { content: `⚠️ <@${userId}> is already in this AVA.`, flags: MessageFlags.Ephemeral });
 
         const count = Object.values(ava.signups).filter(s => s.assignedRole === role.name && s.status === 'accepted').length;
         if (role.limit && count >= role.limit) return safeReply(interaction, { content: `❌ **${role.name}** is full (${count}/${role.limit}).`, flags: MessageFlags.Ephemeral });
 
         let targetUser;
         try { targetUser = await interaction.client.users.fetch(userId); }
-        catch { return safeReply(interaction, { content: `❌ Could not find user \`${userId}\`.`, flags: MessageFlags.Ephemeral }); }
+        catch { return safeReply(interaction, { content: `❌ Could not find user with ID \`${userId}\`. Make sure they share a server with the bot.`, flags: MessageFlags.Ephemeral }); }
 
         ava.signups[userId] = { userId, username: targetUser.tag, selectedRole: role.name, assignedRole: role.name, status: 'accepted', timestamp: Date.now(), addedByHost: true };
         saveAva(messageId, ava);
         await updateAvaEmbed(interaction.client, ava);
+        await updateHostPanel(interaction.client, ava);
 
         try { await targetUser.send(`✅ You have been **added** to **${ava.title}** as **${role.name}**.`); } catch {}
         return safeReply(interaction, { content: `✅ **${targetUser.tag}** added as **${role.name}**.`, flags: MessageFlags.Ephemeral });
@@ -1023,7 +1025,7 @@ module.exports = {
             const msg = await channel.messages.fetch(messageId).catch(() => null);
             if (msg) {
               await msg.edit({
-                embeds: [new EmbedBuilder().setTitle(`❌  ${ava.title} — CANCELLED`).setDescription('This AVA has been cancelled by the host.').setColor(0xED4245).setTimestamp()],
+                embeds: [new EmbedBuilder().setTitle(`❌  ${ava.title} — CANCELLED`).setDescription('This AVA has been cancelled.').setColor(0xED4245).setTimestamp()],
                 components: [],
               });
             }
@@ -1071,6 +1073,7 @@ module.exports = {
         saveAva(messageId, ava);
         scheduleMass(interaction.client, messageId, ava);
         await updateAvaEmbed(interaction.client, ava);
+        await updateHostPanel(interaction.client, ava);
 
         return safeReply(interaction, {
           content: `✅ Mass timer updated! New mass time: <t:${Math.floor(ava.massTime / 1000)}:R> (<t:${Math.floor(ava.massTime / 1000)}:t>)`,
@@ -1107,42 +1110,18 @@ function scheduleMass(client, messageId, ava) {
       const accepted = Object.values(fresh.signups).filter(s => s.status === 'accepted');
       const pings    = accepted.map(s => `<@${s.userId}>`).join(' ');
 
-      // const massEmbed = new EmbedBuilder()
-      //   .setTitle(`⚔️ ${fresh.title} — MASS TIME!`)
-      //   .setDescription(fresh.massMessage)
-      //   .setColor(0xED4245)
-      //   .addFields({ name: '✅ Accepted Members', value: String(accepted.length), inline: true })
-      //   .setTimestamp();
-
-      // for (const role of (fresh.roles || [])) {
-      //   const members = accepted.filter(s => s.assignedRole === role.name);
-      //   if (members.length) {
-      //     massEmbed.addFields({
-      //       name:   `${getRoleEmoji(role.name, role)} ${role.name}`,
-      //       value:  members.map(s => `<@${s.userId}>`).join('\n'),
-      //       inline: true,
-      //     });
-      //   }
-      // }
-
-      // Send mass embed
-      // await channel.send({ embeds: [massEmbed] });
-
-      // Send pings + voice channel invite as a plain message (NOT in the embed)
       if (pings || fresh.inviteUrl) {
         const parts = [];
-        if (pings) parts.push(pings);
-        if (fresh.massMessage) parts.push(`${fresh.massMessage}`);
+        if (pings)              parts.push(pings);
+        if (fresh.massMessage)  parts.push(fresh.massMessage);
         if (fresh.voiceChannel) parts.push(`🔊 <#${fresh.voiceChannel}>`);
         if (fresh.inviteUrl)    parts.push(`🔗 ${fresh.inviteUrl}`);
         await channel.send({ content: parts.join('\n') });
       }
 
-      // ✅ Set inactive BEFORE editing the embed so color goes red correctly
       fresh.active = false;
       saveAva(messageId, fresh);
 
-      // Edit the signup embed — color will now be red because active = false
       const msg = await channel.messages.fetch(messageId).catch(() => null);
       if (msg) {
         await msg.edit({

@@ -1,115 +1,67 @@
 {
   "824377709106429952_541273928295907328": {
-    "title": " AVA Raid Signup",
-    "description": "\n  MAIN TANK >>    (MAPS + GUCCI ITEMS)\n  SECOND TANK >>    (CAPE AND BAGS) \n  MAIN HEALER >>    (ARTIFACTS)\n  SNAKE >>    (HELMETS)\n  INCUBUS SUPPORT >>    (GROUND LOOT) \n  SHADOWCALLER >>    (MELEE DPS))\n  REALNIGGER >>    (RANGE DPS) \n  CRSYTAL REAPER >>    (OFF HANDS)\n  CRSYTAL REAPER >>    (SHOES)\n  CRSYTAL REAPER >>    (ARMOR)",
+    "title": "AVA 8.3",
+    "description": null,
     "imageUrl": "https://cdn.discordapp.com/attachments/824377709106429956/1502106677447626782/toletole-toletolerun.gif?ex=69fe815b&is=69fd2fdb&hm=505394e47fe0891ed38292fda89191a5b2d517dadfd56289df717f6ba4939115",
     "voiceChannel": "1502088590967050390",
     "inviteUrl": "https://discord.gg/GYFGy85rM",
-    "massMessage": "uwu",
-    "massMinutes": 1,
+    "massMessage": "Massing Now!",
+    "massMinutes": 5,
     "pingRoleId": "1495773876368445531",
     "roles": [
       {
         "name": "MAIN TANK",
         "limit": 1,
-        "emoji": null
+        "emoji": null,
+        "description": "Maps + Gucci Items"
       },
       {
         "name": "SECOND TANK",
         "limit": 1,
-        "emoji": null
+        "emoji": null,
+        "description": "Cape and Bags"
       },
       {
         "name": "MAIN HEALER",
         "limit": 1,
-        "emoji": null
+        "emoji": null,
+        "description": "Artifacts"
       },
       {
         "name": "SNAKE",
         "limit": 1,
-        "emoji": null
+        "emoji": null,
+        "description": "Helmets"
       },
       {
         "name": "INCUBUS SUPPORT",
         "limit": 1,
-        "emoji": null
+        "emoji": null,
+        "description": "Ground Loot"
       },
       {
         "name": "SHADOWCALLER",
         "limit": 1,
-        "emoji": null
+        "emoji": null,
+        "description": "Melee DPS"
       },
       {
         "name": "REALNIGGER",
         "limit": 1,
-        "emoji": null
+        "emoji": null,
+        "description": "Range DPS"
       },
       {
         "name": "CRSYTAL REAPER",
         "limit": 3,
-        "emoji": null
+        "emoji": null,
+        "description": "Off Hands / Shoes / Armor"
       },
       {
         "name": "EXTRA DPS",
         "limit": 1,
-        "emoji": null
-      }
-    ]
-  },
-  "824377709106429952_616518029806796820": {
-    "title": "AVA Raid Signup",
-    "description": "MAIN TANK >>    (MAPS + GUCCI ITEMS)\nSECOND TANK >>    (CAPE AND BAGS)\nMAIN HEALER >>    (ARTIFACTS)\nSNAKE >>    (HELMETS)\nINCUBUS SUPPORT >>    (GROUND LOOT)\nSHADOWCALLER >>    (MELEE DPS)\nREALNIGGER >>    (RANGE DPS)\nCRSYTAL REAPER >>    (OFF HANDS)\nCRSYTAL REAPER >>    (SHOES)\nCRSYTAL REAPER >>    (ARMOR)",
-    "imageUrl": null,
-    "voiceChannel": null,
-    "inviteUrl": null,
-    "massMessage": "The raid is starting! Head to the voice channel now!",
-    "massMinutes": 50,
-    "pingRoleId": null,
-    "roles": [
-      {
-        "name": "MAIN TANK",
-        "limit": 1,
-        "emoji": null
-      },
-      {
-        "name": "SECOND TANK",
-        "limit": 1,
-        "emoji": null
-      },
-      {
-        "name": "MAIN HEALER",
-        "limit": 1,
-        "emoji": null
-      },
-      {
-        "name": "SNAKE",
-        "limit": 1,
-        "emoji": null
-      },
-      {
-        "name": "INCUBUS SUPPORT",
-        "limit": 1,
-        "emoji": null
-      },
-      {
-        "name": "SHADOWCALLER",
-        "limit": 1,
-        "emoji": null
-      },
-      {
-        "name": "REALNIGGER",
-        "limit": 1,
-        "emoji": null
-      },
-      {
-        "name": "CRSYTAL REAPER",
-        "limit": 3,
-        "emoji": null
-      },
-      {
-        "name": "EXTRA DPS",
-        "limit": 1,
-        "emoji": null
+        "emoji": null,
+        "description": null
       }
     ]
   }
