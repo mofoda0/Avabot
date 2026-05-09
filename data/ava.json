@@ -1,1 +1,98 @@
-{}
+{
+  "1502666437167288430": {
+    "hostId": "541273928295907328",
+    "guildId": "824377709106429952",
+    "channelId": "824377709106429956",
+    "title": "AVA 8.3",
+    "description": null,
+    "roles": [
+      {
+        "name": "MAIN TANK",
+        "limit": 1,
+        "emoji": null,
+        "description": "Maps + Gucci Items"
+      },
+      {
+        "name": "SECOND TANK",
+        "limit": 1,
+        "emoji": null,
+        "description": "Cape and Bags"
+      },
+      {
+        "name": "MAIN HEALER",
+        "limit": 1,
+        "emoji": null,
+        "description": "Artifacts"
+      },
+      {
+        "name": "SNAKE",
+        "limit": 1,
+        "emoji": null,
+        "description": "Helmets"
+      },
+      {
+        "name": "INCUBUS SUPPORT",
+        "limit": 1,
+        "emoji": null,
+        "description": "Ground Loot"
+      },
+      {
+        "name": "SHADOWCALLER",
+        "limit": 1,
+        "emoji": null,
+        "description": "Melee DPS"
+      },
+      {
+        "name": "REALNIGGER",
+        "limit": 1,
+        "emoji": null,
+        "description": "Range DPS"
+      },
+      {
+        "name": "CRSYTAL REAPER",
+        "limit": 3,
+        "emoji": null,
+        "description": "Off Hands / Shoes / Armor"
+      },
+      {
+        "name": "EXTRA DPS",
+        "limit": 1,
+        "emoji": null,
+        "description": null
+      }
+    ],
+    "signups": {
+      "541273928295907328": {
+        "userId": "541273928295907328",
+        "username": "moklaus",
+        "selectedRole": "MAIN TANK",
+        "assignedRole": "MAIN TANK",
+        "status": "accepted",
+        "timestamp": 1778333996041
+      },
+      "616518029806796820": {
+        "userId": "616518029806796820",
+        "username": "moro.o",
+        "selectedRole": "SECOND TANK",
+        "assignedRole": "SNAKE",
+        "status": "accepted",
+        "timestamp": 1778334011509,
+        "addedByHost": true
+      }
+    },
+    "massMessage": "Massing Now!",
+    "imageUrl": "https://cdn.discordapp.com/attachments/824377709106429956/1502106677447626782/toletole-toletolerun.gif?ex=69fe815b&is=69fd2fdb&hm=505394e47fe0891ed38292fda89191a5b2d517dadfd56289df717f6ba4939115",
+    "voiceChannel": "1502088590967050390",
+    "inviteUrl": "https://discord.gg/GYFGy85rM",
+    "massMinutes": 5,
+    "massTime": 1778334296041,
+    "pingRoleId": "1495773876368445531",
+    "messageId": "1502666437167288430",
+    "launchedAt": 1778333996041,
+    "active": true,
+    "hostPanelMsgId": "1502666445434257428",
+    "hostPanelSelected": null,
+    "hostPanelMode": "pending",
+    "managePanelSelected": null
+  }
+}

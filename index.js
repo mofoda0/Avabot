@@ -1,5 +1,6 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Partials, REST, Routes, ActivityType } = require('discord.js');
+const { restoreTimers } = require('./events/avaHandler');
 const fs = require('fs');
 
 const client = new Client({
@@ -38,6 +39,7 @@ const rest = new REST().setToken(process.env.DISCORD_TOKEN);
 
 client.once('clientReady', async () => { // ← fixed: was 'clientReady'
   console.log(`✅ Logged in as ${client.user.tag}`);
+  restoreTimers(client); // reschedules mass + cleanup timers after restart
 
   // Rotating status
   // const statuses = [

@@ -20,6 +20,15 @@ module.exports = {
           opt.setName('role').setDescription('The role that should be treated as AVA Leader').setRequired(true)
         )
     )
+    // ── Add member to active AVA (AVA Leader only) ──────────────────
+    .addSubcommand(sub =>
+      sub
+        .setName('add')
+        .setDescription('Add a member to the active AVA by assigning them a role (AVA Leader only)')
+        .addUserOption(opt =>
+          opt.setName('member').setDescription('The member to add to the AVA').setRequired(true)
+        )
+    )
     // ── Quick default setters (AVA Leader only) ─────────────────────
     .addSubcommand(sub =>
       sub

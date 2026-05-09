@@ -10,6 +10,7 @@ const {
   getAva, saveAva, deleteAva,
   getAvaLeaderRoleId, setAvaLeaderRoleId,
   getHostDefaults, saveHostDefaults, resetHostDefaults,
+  getGuildAvas,
 } = require('../utils/avaData');
 
 const {
@@ -17,8 +18,11 @@ const {
   buildSetupEmbed, getRoleEmoji,
 } = require('../utils/avaBuilder');
 
-// messageId → timeout
+// messageId → timeout (mass timer)
 const massTimers = new Map();
+
+// messageId → timeout (24-hour cleanup timer after mass fires)
+const cleanupTimers = new Map();
 
 // setupId → draft
 const setupDrafts = new Map();
@@ -247,6 +251,78 @@ module.exports = {
             flags: MessageFlags.Ephemeral,
           });
         }
+
+        // ── /setava add @mention ──────────────────────────────────────
+        // Shows a role-select menu so the leader can assign the mentioned
+        // user directly to their own active AVA.
+        // Each host can only have one active AVA at a time, so hostId is
+        // the natural key — no ambiguity even when multiple AVAs run in parallel.
+        if (sub === 'add') {
+          if (!await checkLeaderRole(interaction, guildId)) return;
+
+          // Find the AVA that belongs to the host who ran this command
+          const ava = getGuildAvas(guildId).find(a => a.active && a.hostId === interaction.user.id);
+          if (!ava) {
+            return safeReply(interaction, { content: '❌ You don\'t have an active AVA running right now.', flags: MessageFlags.Ephemeral });
+          }
+
+          const targetUser = interaction.options.getUser('member');
+
+          // Prevent duplicate signups
+          if (ava.signups[targetUser.id]) {
+            const existing = ava.signups[targetUser.id];
+            return safeReply(interaction, {
+              content: `⚠️ <@${targetUser.id}> is already in this AVA as **${existing.assignedRole || existing.selectedRole}** (${existing.status}).`,
+              flags: MessageFlags.Ephemeral,
+            });
+          }
+
+          // Build a select menu of all roles that still have open slots
+          const openRoles = ava.roles.filter(role => {
+            if (!role.limit) return true; // unlimited — always open
+            const count = Object.values(ava.signups).filter(
+              s => s.assignedRole === role.name && s.status === 'accepted'
+            ).length;
+            return count < role.limit;
+          });
+
+          if (openRoles.length === 0) {
+            return safeReply(interaction, { content: '❌ All roles in the active AVA are currently full.', flags: MessageFlags.Ephemeral });
+          }
+
+          const select = new StringSelectMenuBuilder()
+            .setCustomId(`ava_addcmd_roleselect_${ava.messageId}_${targetUser.id}`)
+            .setPlaceholder('Select a role to assign...');
+
+          openRoles.forEach(role => {
+            const accepted = Object.values(ava.signups).filter(
+              s => s.assignedRole === role.name && s.status === 'accepted'
+            ).length;
+            const slotStr  = role.limit ? `${accepted}/${role.limit} slots` : `${accepted} signed`;
+            const descPart = role.description ? `${role.description} • ` : '';
+            const menuDesc = `${descPart}${slotStr}`;
+            const truncated = menuDesc.length > 100 ? menuDesc.slice(0, 97) + '…' : menuDesc;
+
+            const option = new StringSelectMenuOptionBuilder()
+              .setLabel(role.name)
+              .setValue(role.name)
+              .setDescription(truncated);
+
+            const emojiStr = getRoleEmoji(role.name, role);
+            if (emojiStr) {
+              const emojiObj = /^\d+$/.test(emojiStr.trim()) ? { id: emojiStr.trim() } : emojiStr.trim();
+              try { option.setEmoji(emojiObj); } catch { /* non-fatal: skip emoji */ }
+            }
+
+            select.addOptions(option);
+          });
+
+          return safeReply(interaction, {
+            content: `Select a role to assign to <@${targetUser.id}>:`,
+            components: [new ActionRowBuilder().addComponents(select)],
+            flags: MessageFlags.Ephemeral,
+          });
+        }
       }
 
 
@@ -258,6 +334,63 @@ module.exports = {
         defaults.massMessage = msg;
         saveHostDefaults(guildId, interaction.user.id, defaults);
         return safeReply(interaction, { content: '✅ Default mass message saved.', flags: MessageFlags.Ephemeral });
+      }
+
+      // ══════════════════════════════════════════════════════════════
+      // /setava add — role selected: assign member to AVA
+      // customId format: ava_addcmd_roleselect_{messageId}_{targetUserId}
+      // ══════════════════════════════════════════════════════════════
+      if (interaction.isStringSelectMenu() && interaction.customId.startsWith('ava_addcmd_roleselect_')) {
+        // Strip the prefix then split on the last underscore to get userId
+        // (messageId itself could contain underscores in theory, so split from end)
+        const withoutPrefix = interaction.customId.replace('ava_addcmd_roleselect_', '');
+        const lastUnderscore = withoutPrefix.lastIndexOf('_');
+        const messageId  = withoutPrefix.slice(0, lastUnderscore);
+        const targetUserId = withoutPrefix.slice(lastUnderscore + 1);
+
+        const ava = getAva(messageId);
+        if (!ava || !ava.active) return safeReply(interaction, { content: '❌ This AVA is no longer active.', flags: MessageFlags.Ephemeral });
+
+        // Guard against duplicate (race condition)
+        if (ava.signups[targetUserId]) {
+          return safeReply(interaction, { content: `⚠️ <@${targetUserId}> was already added to this AVA.`, flags: MessageFlags.Ephemeral });
+        }
+
+        const roleName = interaction.values[0];
+        const role = ava.roles.find(r => r.name === roleName);
+
+        // Re-check slot limit at assignment time
+        const count = Object.values(ava.signups).filter(
+          s => s.assignedRole === roleName && s.status === 'accepted'
+        ).length;
+        if (role?.limit && count >= role.limit) {
+          return safeReply(interaction, { content: `❌ **${roleName}** just filled up. Please pick another role.`, flags: MessageFlags.Ephemeral });
+        }
+
+        let targetUser;
+        try { targetUser = await interaction.client.users.fetch(targetUserId); }
+        catch { return safeReply(interaction, { content: `❌ Could not fetch the user. Make sure they share a server with the bot.`, flags: MessageFlags.Ephemeral }); }
+
+        ava.signups[targetUserId] = {
+          userId:       targetUserId,
+          username:     targetUser.tag,
+          selectedRole: roleName,
+          assignedRole: roleName,
+          status:       'accepted',
+          timestamp:    Date.now(),
+          addedByHost:  true,
+        };
+
+        saveAva(messageId, ava);
+        await updateAvaEmbed(interaction.client, ava);
+        await updateHostPanel(interaction.client, ava);
+
+        try { await targetUser.send(`✅ You have been **added** to **${ava.title}** as **${roleName}**.`); } catch {}
+
+        return safeReply(interaction, {
+          content: `✅ <@${targetUserId}> has been added as **${roleName}**.`,
+          flags: MessageFlags.Ephemeral,
+        });
       }
 
       // ══════════════════════════════════════════════════════════════
@@ -402,7 +535,7 @@ module.exports = {
           .setPlaceholder('Select a role to edit...');
         draft.roles.forEach(r => select.addOptions(new StringSelectMenuOptionBuilder().setLabel(r.name).setValue(r.name)));
         return safeReply(interaction, {
-          content: 'Select the role you want to edit:',
+          content: 'Select the role to edit:',
           components: [new ActionRowBuilder().addComponents(select)],
           flags: MessageFlags.Ephemeral,
         });
@@ -410,39 +543,46 @@ module.exports = {
 
       if (interaction.isStringSelectMenu() && interaction.customId.startsWith('ava_setup_editrole_select_')) {
         const setupId  = getSetupId(interaction.customId, 'ava_setup_editrole_select_');
-        const roleName = interaction.values[0];
+        const oldName  = interaction.values[0];
         const draft    = setupDrafts.get(setupId);
-        const role     = draft?.roles.find(r => r.name === roleName);
-        if (!role) return safeReply(interaction, { content: '❌ Role not found.', flags: MessageFlags.Ephemeral });
-        const modal = new ModalBuilder().setCustomId(`ava_modal_editrole_${setupId}_${roleName}`).setTitle(`Edit Role: ${roleName}`);
+        if (!draft) return safeReply(interaction, { content: '❌ Setup session expired.', flags: MessageFlags.Ephemeral });
+        const existing = draft.roles.find(r => r.name === oldName);
+        const modal    = new ModalBuilder().setCustomId(`ava_modal_editrole_${setupId}_${oldName}`).setTitle(`Edit Role: ${oldName}`);
         modal.addComponents(
           new ActionRowBuilder().addComponents(
-            new TextInputBuilder().setCustomId('roleName').setLabel('New Role Name')
-              .setStyle(TextInputStyle.Short).setValue(roleName).setRequired(true).setMaxLength(50)
+            new TextInputBuilder().setCustomId('roleName').setLabel('Role Name')
+              .setStyle(TextInputStyle.Short).setValue(oldName).setRequired(true).setMaxLength(50)
           ),
           new ActionRowBuilder().addComponents(
-            new TextInputBuilder().setCustomId('roleLimit').setLabel('Max slots (blank = unlimited)')
-              .setStyle(TextInputStyle.Short).setValue(role.limit ? String(role.limit) : '').setRequired(false)
+            new TextInputBuilder().setCustomId('roleLimit').setLabel('Max slots (leave blank = unlimited)')
+              .setStyle(TextInputStyle.Short).setValue(existing?.limit ? String(existing.limit) : '').setRequired(false)
           ),
           new ActionRowBuilder().addComponents(
-            new TextInputBuilder().setCustomId('roleEmoji').setLabel('Emoji (unicode 🛡️ or custom emoji ID)')
-              .setStyle(TextInputStyle.Short).setValue(role.emoji || '')
-              .setPlaceholder('e.g. 🛡️  or  1234567890123456789').setRequired(false).setMaxLength(64)
+            new TextInputBuilder().setCustomId('roleEmoji').setLabel('Emoji (unicode or custom emoji ID)')
+              .setStyle(TextInputStyle.Short).setValue(existing?.emoji || '').setRequired(false).setMaxLength(64)
           ),
           new ActionRowBuilder().addComponents(
-            new TextInputBuilder().setCustomId('roleDesc').setLabel('Description (shown in dropdown & embed)')
-              .setStyle(TextInputStyle.Short).setValue(role.description || '')
-              .setPlaceholder('e.g. Maps + Gucci Items').setRequired(false).setMaxLength(80)
+            new TextInputBuilder().setCustomId('roleDesc').setLabel('Description')
+              .setStyle(TextInputStyle.Short).setValue(existing?.description || '').setRequired(false).setMaxLength(80)
           ),
         );
         return interaction.showModal(modal);
       }
 
       if (interaction.isModalSubmit() && interaction.customId.startsWith('ava_modal_editrole_')) {
-        const parts       = interaction.customId.replace('ava_modal_editrole_', '').split('_');
-        const setupId     = parts[0];
-        const oldName     = parts.slice(1).join('_');
-        const draft       = setupDrafts.get(setupId);
+        // customId: ava_modal_editrole_{setupId}_{oldName}
+        const withoutPrefix = interaction.customId.replace('ava_modal_editrole_', '');
+        const firstUnderscore = withoutPrefix.indexOf('_');
+        // setupId is userId_timestamp which contains underscores; oldName has none (uppercase letters only)
+        // We stored it as {setupId}_{oldName} where setupId = userId_timestamp
+        // Split from the right by the LAST underscore block that doesn't contain digits only
+        // Simplest: setupId is always "userId_timestamp" (two segments joined by one underscore)
+        // So format is: {userId}_{timestamp}_{oldName}
+        const parts   = withoutPrefix.split('_');
+        // parts[0] = userId, parts[1] = timestamp, parts[2..] = oldName (may contain _ if somehow)
+        const setupId = `${parts[0]}_${parts[1]}`;
+        const oldName = parts.slice(2).join('_');
+        const draft   = setupDrafts.get(setupId);
         if (!draft) return safeReply(interaction, { content: '❌ Setup session expired.', flags: MessageFlags.Ephemeral });
         const newName     = interaction.fields.getTextInputValue('roleName').trim().toUpperCase();
         const limitRaw    = interaction.fields.getTextInputValue('roleLimit').trim();
@@ -1015,6 +1155,8 @@ module.exports = {
         if (interaction.user.id !== ava.hostId) return safeReply(interaction, { content: '❌ Only the host can cancel.', flags: MessageFlags.Ephemeral });
 
         if (massTimers.has(messageId)) { clearTimeout(massTimers.get(messageId)); massTimers.delete(messageId); }
+        // Also cancel any pending 24h cleanup timer
+        if (cleanupTimers.has(messageId)) { clearTimeout(cleanupTimers.get(messageId)); cleanupTimers.delete(messageId); }
 
         ava.active = false;
         saveAva(messageId, ava);
@@ -1131,6 +1273,10 @@ function scheduleMass(client, messageId, ava) {
       }
 
       massTimers.delete(messageId);
+
+      // ── Schedule 24-hour cleanup after mass fires ──────────────
+      // Deletes the AVA record from ava.json 24 hours after mass time.
+      scheduleCleanup(messageId);
     } catch (err) {
       console.error('❌ Error triggering mass:', err);
     }
@@ -1138,3 +1284,70 @@ function scheduleMass(client, messageId, ava) {
 
   massTimers.set(messageId, timer);
 }
+
+// ── Schedule 24-hour post-mass cleanup ────────────────────────────
+// Called automatically after mass fires, and also on bot startup for
+// any AVA records that have already massed (active: false, massTime set).
+function scheduleCleanup(messageId) {
+  // Cancel any existing cleanup timer for this messageId first
+  if (cleanupTimers.has(messageId)) clearTimeout(cleanupTimers.get(messageId));
+
+  const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+
+  const timer = setTimeout(() => {
+    try {
+      deleteAva(messageId);
+      cleanupTimers.delete(messageId);
+      console.log(`🗑️ AVA ${messageId} deleted from ava.json (24h post-mass cleanup).`);
+    } catch (err) {
+      console.error(`❌ Error during 24h cleanup for AVA ${messageId}:`, err);
+    }
+  }, TWENTY_FOUR_HOURS);
+
+  cleanupTimers.set(messageId, timer);
+}
+
+// ── Restore timers on bot startup ─────────────────────────────────
+// Call this once from your ready event (or index.js) after the client is ready.
+// It reschedules mass timers for still-active AVAs, and cleanup timers for
+// AVAs that have already massed but haven't been deleted yet.
+function restoreTimers(client) {
+  const { load } = require('../utils/avaData');
+  const all = load();
+  const now = Date.now();
+
+  for (const [messageId, ava] of Object.entries(all)) {
+    if (ava.active && ava.massTime && ava.massTime > now) {
+      // Still waiting to mass — reschedule the mass timer
+      scheduleMass(client, messageId, ava);
+      // console.log(`⏰ Restored mass timer for AVA ${messageId} (fires in ${Math.round((ava.massTime - now) / 60000)} min).`);
+    } else if (!ava.active && ava.massTime) {
+      // Already massed — schedule cleanup based on how long ago mass fired
+      const elapsed  = now - ava.massTime;
+      const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+      const remaining = TWENTY_FOUR_HOURS - elapsed;
+
+      if (remaining <= 0) {
+        // Already past 24h — delete immediately
+        deleteAva(messageId);
+        // console.log(`🗑️ AVA ${messageId} deleted on startup (already past 24h post-mass).`);
+      } else {
+        // Still within 24h window — schedule the remainder
+        if (cleanupTimers.has(messageId)) clearTimeout(cleanupTimers.get(messageId));
+        const timer = setTimeout(() => {
+          try {
+            deleteAva(messageId);
+            cleanupTimers.delete(messageId);
+            // console.log(`🗑️ AVA ${messageId} deleted from ava.json (24h post-mass cleanup after restart).`);
+          } catch (err) {
+            console.error(`❌ Error during startup cleanup for AVA ${messageId}:`, err);
+          }
+        }, remaining);
+        cleanupTimers.set(messageId, timer);
+        // console.log(`🗑️ Scheduled cleanup for already-massed AVA ${messageId} in ${Math.round(remaining / 60000)} min.`);
+      }
+    }
+  }
+}
+
+module.exports.restoreTimers = restoreTimers;
